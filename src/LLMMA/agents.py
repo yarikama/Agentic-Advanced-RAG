@@ -36,7 +36,7 @@ class Agents:
         self.create_response_auditor = self._response_auditor()
         self.create_database_updater = self._database_updater()
     
-    def get_classification_node_agent(self):
+    def get_user_query_classification_node_agent(self):
         return [
             self.create_classifier,
         ]

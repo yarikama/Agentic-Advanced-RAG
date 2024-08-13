@@ -312,8 +312,33 @@ AuditMetric(
 )
 """)
 
-DATABASE_UPDATER_PROMPT = dedent("""
+# Version without specific collection
+DATABASE_UPDATER_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
 Store the user query and summary response in the database if approved by the Response Auditor.
+
+User query: {user_query}
+
+Steps:
+1. Review the Response Auditor's evaluation.
+
+2. If the Response Auditor approves (overall_score >= 0.7 and restart_required is False):
+   a. Use _list_all_collections() to get a list of available collections.
+   b. Analyze the user query and choose the most relevant collection from the list.
+   c. Use _retrieve_data([chosen_collection], [user_query], top_k=1) to check for similar existing queries.
+   d. If no similar query exists or the existing answer is significantly different:
+      i. Prepare the question-answer pair:
+         question = user_query
+         answer = summarizer's complete response
+      ii. Use _insert_qa_into_db(chosen_collection, question, answer) to store the information.
+   e. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
+
+3. If not approved (overall_score < 0.7 or restart_required is True), take no action.
+Do not modify the summarizer's response in any way. Store and output it exactly as provided.
+""")
+
+# Version with specific collection
+DATABASE_UPDATER_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
+Store the user query and summary response in the specified collection if approved by the Response Auditor.
 
 User query: {user_query}
 Specific collection: {specific_collection}
@@ -322,16 +347,19 @@ Steps:
 1. Review the Response Auditor's evaluation.
 
 2. If the Response Auditor approves (overall_score >= 0.7 and restart_required is False):
-a. If a specific collection is not provided, use list_all_collections_tool to identify the most suitable collection.
-otherwise, use the provided specific collection.
-b. Use insert_qa_into_db_tool to store the information in the selected collection.
-c. The stored information should only include:
-    - Question: The original user query
-    - Answer: The summarizer's complete response
+   a. Use _retrieve_data([specific_collection], [user_query], top_k=1) to check for similar existing queries.
+   b. If no similar query exists or the existing answer is significantly different:
+      i. Prepare the question-answer pair:
+         question = user_query
+         answer = summarizer's complete response
+      ii. Use _insert_qa_into_db(specific_collection, question, answer) to store the information.
+   c. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
 
 3. If not approved (overall_score < 0.7 or restart_required is True), take no action.
 
 Do not modify the summarizer's response in any way. Store and output it exactly as provided.
-Do not store or output any additional information beyond the user query and summarizer's response.
 """)
 
+DATABASE_UPDATER_EXPECTED_OUTPUT = dedent("""
+Output the result of the insertion operation or the reason for skipping insertion.
+""")

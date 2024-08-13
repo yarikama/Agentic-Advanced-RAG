@@ -29,8 +29,8 @@ class LLMMA_RAG_System:
     def user_query_classification_run(self):
         # Crew with process
         self.crew = Crew(  
-            agents=self.agents.get_classification_node_agent(),
-            tasks=self.tasks.get_user_query_classification_task(),
+            agents=self.agents.get_user_query_classification_node_agent(),
+            tasks=self.tasks.get_user_query_classification_node_task(),
             process=Process.sequential,
             verbose=True,
         )
@@ -40,7 +40,7 @@ class LLMMA_RAG_System:
         # Crew with process
         self.crew = Crew(  
             agents=self.agents.get_retrieval_and_generation_node_agent(),
-            tasks=self.tasks.retrieval_and_generation_tasks(),
+            tasks=self.tasks.get_retrieval_and_generation_node_tasks(),
             process=Process.sequential,
             verbose=True,
         )
@@ -50,7 +50,7 @@ class LLMMA_RAG_System:
         # Crew with process
         self.crew = Crew(  
             agents=self.agents.get_generation_node_agent(),
-            tasks=self.tasks.generation_tasks(),
+            tasks=self.tasks.get_generation_node_tasks(),
             process=Process.sequential,
             verbose=True,
         )

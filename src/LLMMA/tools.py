@@ -33,11 +33,12 @@ def create_tool(callable: Callable):
 
 class Tools:
     def __init__(self, vectordatabase: VectorDatabase, embedder: Embedder, retriever: Retriever, data_processor: DataProcessor):
+        # Utils
         self.vectordatabase = vectordatabase 
         self.embedder = embedder
         self.retriever = retriever
         self.data_processor = data_processor
-        
+        # Tools
         self.create_list_all_collections_tool = create_tool(self._list_all_collections)
         self.create_retrieve_data_tool = create_tool(self._retrieve_data)
         self.create_ranker_tool = create_tool(self._rerank)
@@ -45,7 +46,8 @@ class Tools:
         self.create_basic_statistics_tool = create_tool(self._basic_statistics)
         self.create_insert_qa_into_db_tool = create_tool(self._insert_qa_into_db)
         print("Tools initialized")
-        
+    
+    # Getters for all tools
     def get_retriever_toolkit(self):
         return [
             self.create_list_all_collections_tool,
@@ -58,16 +60,27 @@ class Tools:
             self.create_basic_statistics_tool,
         ]
 
-    def get_database_updater_toolkit(self):
+    def get_database_updater_toolkit_wo_collection(self):
         return [
             self.create_list_all_collections_tool,
+            self.create_retrieve_data_tool,
+            self.create_insert_qa_into_db_tool,
+        ]
+        
+    def get_database_updater_toolkit_w_collection(self):
+        return [
+            self.create_retrieve_data_tool,
             self.create_insert_qa_into_db_tool,
         ]
     
-    def get_classifiction_toolkit(self):
+    def get_classifiction_toolkit_wo_collection(self):
         return [
             self.create_list_all_collections_tool,
         ]
+        
+    def get_classifiction_toolkit_w_collection(self):
+        return []
+        
         
     def get_retrieve_toolkit(self):
         return [
@@ -79,6 +92,7 @@ class Tools:
             self.create_ranker_tool
         ]
     
+    # Tools definitions
     def _list_all_collections(self) -> List[str]:
         """
         <desc>
