@@ -1,0 +1,39 @@
+[tool.poetry]
+name = "aaai-experiment"
+version = "0.1.0"
+description = ""
+authors = ["yarikama <amaki30226@gmail.com>"]
+readme = "README.md"
+
+[tool.poetry.dependencies]
+python = ">=3.10,<=3.13"
+transformers = "^4.42.4"
+torch = "^2.3.1"
+torchvision = "^0.18.1"
+pymilvus = {extras = ["sparse"], version = "^2.4.4"}
+openai = "^1.35.14"
+requests = "^2.32.3"
+tqdm = "^4.66.4"
+langchain = "^0.2.9"
+langchain-community = "^0.2.7"
+langchain-milvus = "^0.1.2"
+langchain-openai = "^0.1.17"
+sentence-transformers = "^3.0.1"
+langchain-huggingface = "^0.0.3"
+pdfplumber = "^0.11.2"
+llama-index = "^0.10.56"
+langchain-experimental = "^0.0.62"
+datasets = "^2.20.0"
+crewai = {extras = ["tools"], version = "^0.41.1"}
+streamlit = "^1.36.0"
+pydantic = "^2.8.2"
+jq = "^1.7.0"
+ragas = "^0.1.12"
+pandas = "^2.2.2"
+langgraph = "^0.2.3"
+mypy = "^1.11.1"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

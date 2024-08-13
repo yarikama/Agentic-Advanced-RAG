@@ -1,0 +1,5 @@
+__pycache__/
+volumes/
+.corpus/
+.data/
+.env
