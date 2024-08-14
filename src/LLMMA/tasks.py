@@ -30,7 +30,7 @@ class Tasks:
         self.create_generation_task = self._generation_task([self.create_rerank_task])
         self.create_summarizer_task = self._summarizer_task([self.create_generation_task])
         self.create_response_auditor_task = self._response_auditor_task([self.create_summarizer_task])
-        self.create_database_updater_task = self._database_updater_task([self.create_summarizer_task, self.create_response_auditor_task])
+        self.create_database_updater_task = self._database_updater_task([self.create_user_query_classification_task, self.create_summarizer_task, self.create_response_auditor_task])
     
     # Getters for all tasks in nodes
     def get_user_query_classification_node_task(self):
@@ -56,6 +56,10 @@ class Tasks:
             self.create_response_auditor_task,
         ]
         
+    def get_database_update_node_task(self):
+        return [
+            self.create_database_updater_task,
+        ]
     
     # Getters for all tasks in overall process
     def get_sequential_tasks(self):

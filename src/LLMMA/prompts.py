@@ -125,8 +125,6 @@ If retrieval is not needed for a query, set its "collection_name" to None.
 """)
 
 RETRIEVAL_PROMPT = dedent("""
-User Query: {user_query}
-
 Using the list of QueryClassification objects from the context, perform the retrieval process:
 
 1. Process the QueryClassification objects:
@@ -140,25 +138,20 @@ d. Ensure the lists are in the same order.
 - The second argument should be the list of queries.
 - Use the top_k value: 5 for retrieving data.
 
-3. The retrieve_data_tool will return a list of dictionaries, each containing:
-- query: str
-- collection_name: str
-- retrieved_data: List[Dict[str, Any]]
+3. The retrieve_data_tool will return a dictionary of 2 lists:
+- content: List[str]  # Retrieved content for each query
+- metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
 
-4. Compile these results into a RefinedRetrievalData object:
-RefinedRetrievalData:
-- metadata: List[Dict[str, Any]]  # Extracted from retrieved_data
-- content: List[str]  # Extracted from retrieved_data
-
-5. Remove duplicates:
-a. Identify and remove any duplicate content entries.
-b. For each removed duplicate content, also remove its corresponding metadata entry.
-c. Ensure that the metadata and content lists remain synchronized after removal.
-
-6. Remove irrelevant data:
-a. For each content entry, evaluate its relevance to the original user query.
+4. Remove irrelevant data:
+a. For each content entry, evaluate its relevance to the original user query: {user_query}.
 b. Remove content entries that are deemed irrelevant, along with their corresponding metadata.
 c. If any concerns about relevance arise, don't remove the entire entry.
+
+5. Compile these results into a pydantic object:
+RefinedRetrievalData:
+- content: List[str]  # Extracted from retrieved_data
+- metadata: List[Dict[str, Any]]  # Extracted from retrieved_data
+
 
 7. Return the final RefinedRetrievalData object with unique, relevant content and corresponding metadata.
 """)
@@ -182,11 +175,11 @@ Follow these steps:
     c) Compile these scores into a list of floats (relevance_scores).
     d) Use the rerank tool with the original metadata, content, and your relevance_scores.
 3. The rerank tool will return ranked data, metadata, and relevance scores which are same as RankedRetrievalData.
-4. Just put the result return by your tool into RankedRetrievalData.
-RankedRetrievalData:
-    ranked_data: List[str]
-    ranked_metadata: List[Dict[str, Any]]
-    relevance_scores: List[float]
+4. Just put the result return by your tool into a pydantic object.
+    RankedRetrievalData:
+        ranked_data: List[str]
+        ranked_metadata: List[Dict[str, Any]]
+        relevance_scores: List[float]
 """)
 
 RERANK_EXPECTED_OUTPUT = dedent("""
@@ -312,19 +305,18 @@ AuditMetric(
 )
 """)
 
-# Version without specific collection
 DATABASE_UPDATER_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
 Store the user query and summary response in the database if approved by the Response Auditor.
 
 User query: {user_query}
 
 Steps:
-1. Review the Response Auditor's evaluation.
+1. Review the Response Auditor's evaluation and Classification results.
 
-2. If the Response Auditor approves (overall_score >= 0.7 and restart_required is False):
+2. If the Response Auditor approves (overall_score >= 0.7 and restart_required is False) and the Classification result indicates retrieval is needed:
    a. Use _list_all_collections() to get a list of available collections.
    b. Analyze the user query and choose the most relevant collection from the list.
-   c. Use _retrieve_data([chosen_collection], [user_query], top_k=1) to check for similar existing queries.
+   c. Use _dense_retrieve_data([chosen_collection], [user_query], top_k=1) to check for similar existing queries.
    d. If no similar query exists or the existing answer is significantly different:
       i. Prepare the question-answer pair:
          question = user_query
@@ -332,11 +324,9 @@ Steps:
       ii. Use _insert_qa_into_db(chosen_collection, question, answer) to store the information.
    e. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
 
-3. If not approved (overall_score < 0.7 or restart_required is True), take no action.
 Do not modify the summarizer's response in any way. Store and output it exactly as provided.
 """)
 
-# Version with specific collection
 DATABASE_UPDATER_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
 Store the user query and summary response in the specified collection if approved by the Response Auditor.
 
@@ -344,18 +334,16 @@ User query: {user_query}
 Specific collection: {specific_collection}
 
 Steps:
-1. Review the Response Auditor's evaluation.
+1. Review the Response Auditor's evaluation and Classification results.
 
-2. If the Response Auditor approves (overall_score >= 0.7 and restart_required is False):
-   a. Use _retrieve_data([specific_collection], [user_query], top_k=1) to check for similar existing queries.
+2. If the Response Auditor approves (overall_score >= 0.7 and restart_required is False) and the Classification result indicates retrieval is needed:
+   a. Use _dense_retrieve_data([specific_collection], [user_query], top_k=1) to check for similar existing queries.
    b. If no similar query exists or the existing answer is significantly different:
       i. Prepare the question-answer pair:
          question = user_query
          answer = summarizer's complete response
       ii. Use _insert_qa_into_db(specific_collection, question, answer) to store the information.
    c. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
-
-3. If not approved (overall_score < 0.7 or restart_required is True), take no action.
 
 Do not modify the summarizer's response in any way. Store and output it exactly as provided.
 """)

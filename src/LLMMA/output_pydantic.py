@@ -27,8 +27,8 @@ class QueriesIdentificationList(BaseModel):
     
 # For Retriever (Retrieval)
 class RefinedRetrievalData(BaseModel):
-    metadata: List[Dict[str, Any]]
     content: List[str]
+    metadata: List[Dict[str, Any]]
     
 # For Reranker
 class RankedRetrievalData(BaseModel):

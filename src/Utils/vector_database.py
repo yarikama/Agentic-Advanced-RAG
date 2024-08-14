@@ -160,8 +160,21 @@ class VectorDatabase:
                ) -> List[Dict[str, Any]]:
         
         collection = self.get_collection(collection_name)
-        results = collection.search(search_request, limit=top_k)
-        return results
+        collection.load()
+        
+        search_params = {
+            "data": search_request.data,
+            "anns_field": search_request.anns_field,
+            "param": search_request.param,
+            "limit": top_k,
+            "output_fields": ["content", "metadata"]
+        }
+        
+        milvus_results = collection.search(**search_params)        
+        
+        contents = [self.get_content_from_hits(hits) for hits in milvus_results]
+
+        return contents
 
 
 if __name__ == "__main__":

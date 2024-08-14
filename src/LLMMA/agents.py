@@ -36,6 +36,8 @@ class Agents:
         self.create_response_auditor = self._response_auditor()
         self.create_database_updater = self._database_updater()
     
+    
+    # Getters for all agents in nodes
     def get_user_query_classification_node_agent(self):
         return [
             self.create_classifier,
@@ -57,6 +59,12 @@ class Agents:
             self.create_response_auditor,
         ]
         
+    def get_database_update_node_agent(self):
+        return [
+            self.create_database_updater,
+        ]
+    
+    # Getters for all agents in overall process
     def get_sequential_agents(self):
         return [
             self.create_plan_coordinator, # Only Plan Coordinator is used in Sequential
@@ -79,7 +87,9 @@ class Agents:
             self.create_response_auditor,
             self.create_database_updater,
         ]
-            
+        
+        
+    # Agent definitions    
     def _plan_coordinator(self):
         return Agent(
             role='Plan Coordinator',
@@ -335,12 +345,11 @@ class Agents:
             role='Database Updater',
             goal='Document and store task conclusions in the database.',
             backstory="""
-            You extract key information from the Summarizer's report, format it for 
+            You get information from the Summarizer's report, format it for 
             storage, and update the database after approval from the Response Auditor.
             """,
             verbose=True,
             llm=self.llm,
-            tools=self.tools.get_database_updater_toolkit(),
             memory=True,
             cache=True,
             allow_delegation=False,

@@ -69,28 +69,22 @@ class Retriever:
         dense_query = self.embedder.embed_dense(hypothetical_doc)
         sparse_query = self.embedder.embed_sparse(collection_name, hypothetical_doc)
         hybrid_search_requests_HyDE = self.hybrid_search_request(dense_query, sparse_query)
-        results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_HyDE, "weighted", [1 - alpha, alpha], top_k - int(top_k / 2))
-        print(f"hybrid search with HyDE \(dense search weight of {1 - alpha} and sparse search weight of {alpha}\)")
+        results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_HyDE, "weighted", [1 - alpha, alpha], max(top_k - int(top_k / 2), 1))
+        print(f"""hybrid search with HyDE (dense search weight of {1 - alpha} and sparse search weight of {alpha})""")
         # Original
         dense_query = self.embedder.embed_dense(query_text)
         sparse_query = self.embedder.embed_sparse(collection_name, query_text)
         hybrid_search_requests_origin = self.hybrid_search_request(dense_query, sparse_query)
         # results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], top_k)
-        results.extend(self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], int(top_k / 2)))
-        print(f"hybrid search with original \(dense search weight of {1 - alpha} and sparse search weight of {alpha}\)")
+        results.extend(self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], max(1, int(top_k / 2))))
+        print(f"""hybrid search with original (dense search weight of {1 - alpha} and sparse search weight of {alpha})""")
         # print(f"Successfully retrieved {len(results)} results")
         
         return results
     
-    def dense_retrieve(self, collection_name: str, query_text: str, top_k: int = const.TOP_K, use_hyde: bool = const.USE_HYDE) -> List[Dict[str, Any]]:
-        if use_hyde:
-            hypothetical_doc = self.generate_hypothetical_document(query_text)
-            dense_query = self.embedder.embed_dense(hypothetical_doc)
-        else:
-            dense_query = self.embedder.embed_dense(query_text)
-
+    def dense_retrieve(self, collection_name: str, query_text: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+        dense_query = self.embedder.embed_dense(query_text)
         dense_search_request = self.dense_search_request(dense_query, "dense_vector")
-        
         results = self.vectordatabase.search(collection_name, dense_search_request, top_k)
         return results
         
@@ -98,6 +92,6 @@ if __name__ == "__main__":
     vectordatabase = VectorDatabase()
     embedder = Embedder()
     retriever = Retriever(vectordatabase, embedder)
-    print(retriever.hybrid_retrieve("RAG", "What is RAG?"))
+    print(retriever.dense_retrieve("RAG", "What is RAG?"))
     
     

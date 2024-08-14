@@ -34,7 +34,9 @@ class LLMMA_RAG_System:
             process=Process.sequential,
             verbose=True,
         )
-        return self.crew.kickoff().pydantic
+        return {
+            "user_query_classification": self.crew.kickoff().pydantic
+        }
     
     def retrieval_and_generation_run(self):
         # Crew with process
@@ -44,7 +46,15 @@ class LLMMA_RAG_System:
             process=Process.sequential,
             verbose=True,
         )
-        return self.crew.kickoff().pydantic, self.tasks.create_retrieval_task.output.pydantic
+        self.crew.kickoff()
+        return {
+            "queries": self.tasks.create_query_processor_task.output.pydantic,
+            "queries_identification_list": self.tasks.create_classification_task.output.pydantic,
+            "refined_retrieval_data": self.tasks.create_retrieval_task.output.pydantic,
+            "ranked_retrieval_data": self.tasks.create_rerank_task.output.pydantic,
+            "result": self.tasks.create_summarizer_task.output,
+            "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
+        }
     
     def generation_run(self):
         # Crew with process
@@ -54,17 +64,25 @@ class LLMMA_RAG_System:
             process=Process.sequential,
             verbose=True,
         )
-        return self.crew.kickoff().pydantic, None
+        self.crew.kickoff()
+        return {
+            "queries": None,
+            "queries_identification_list": None,
+            "refined_retrieval_data": None,
+            "ranked_retrieval_data": None,
+            "result": self.tasks.create_summarizer_task.output,
+            "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
+        }
     
     def database_update_run(self):
         # Crew with process
         self.crew = Crew(  
-            agents=self.agents.get_update_node_agent(),
-            tasks=self.tasks.update_tasks(),
+            agents=self.agents.get_database_update_node_agent(),
+            tasks=self.tasks.get_database_update_node_task(),
             process=Process.sequential,
             verbose=True,
         )
-        return self.crew.kickoff().pydantic, None
+        self.crew.kickoff()
     
     def overall_run(self, mode=str, new_query=None, new_collection=None):
         # Update the task with new query and collection
@@ -77,12 +95,8 @@ class LLMMA_RAG_System:
             process=Process.sequential if mode == "sequential" else Process.hierarchical,
             output_log_file=True,
             verbose=True,
-        )
-        
-        # Run the crew
-        self.crew.kickoff()
-        
-        # Get the result and context
+        )        
+        self.crew.kickoff()        
         result = self.tasks.create_summarizer_task.output
         context = self.tasks.create_retrieval_task.output.pydantic
         return result, context

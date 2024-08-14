@@ -41,6 +41,7 @@ class Tools:
         # Tools
         self.create_list_all_collections_tool = create_tool(self._list_all_collections)
         self.create_retrieve_data_tool = create_tool(self._retrieve_data)
+        self.create_dense_retrieve_data_tool = create_tool(self._dense_retrieve_data)
         self.create_ranker_tool = create_tool(self._rerank)
         self.create_calculator_tool = create_tool(self._calculator)
         self.create_basic_statistics_tool = create_tool(self._basic_statistics)
@@ -63,13 +64,13 @@ class Tools:
     def get_database_updater_toolkit_wo_collection(self):
         return [
             self.create_list_all_collections_tool,
-            self.create_retrieve_data_tool,
+            self.create_dense_retrieve_data_tool,
             self.create_insert_qa_into_db_tool,
         ]
         
     def get_database_updater_toolkit_w_collection(self):
         return [
-            self.create_retrieve_data_tool,
+            self.create_dense_retrieve_data_tool,
             self.create_insert_qa_into_db_tool,
         ]
     
@@ -119,16 +120,63 @@ class Tools:
         queries: A list of query strings to search for
         top_k: The number of top results to retrieve for each query, suggested value: 5
         """
-        results = []
+        content = []
+        metadata = []
+        seen_content = set() 
         for collection_name, query in zip(collection_names, queries):
             if collection_name and query:
                 retrieved_data = self.retriever.hybrid_retrieve(collection_name, query, top_k)
-                results.append({
-                    "query": query,
-                    "collection_name": collection_name,
-                    "retrieved_data": retrieved_data
-                })
-        return results
+                for result_list in retrieved_data:
+                    for doc in result_list:
+                        doc_content = content.append(doc.get('content', ''))
+                        doc_metadata = metadata.append(doc.get('metadata', {}))
+                        
+                        if doc_content not in seen_content:
+                            seen_content.add(doc_content)  
+                            content.append(doc_content)
+                            metadata.append(doc_metadata)
+                # results.append({
+                #     "query": query,
+                #     "collection_name": collection_name,
+                #     "retrieved_data": retrieved_data
+                # })
+        return {
+            "content": content,
+            "metadata": metadata
+        }
+        
+    def _dense_retrieve_data(self, collection_names: List[str], queries: List[str], top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+        """
+        <desc>Retrieves data for multiple queries from specified collections in the vector database</desc>
+        
+        collection_names: A list of collection names to search in
+        queries: A list of query strings to search for
+        top_k: The number of top results to retrieve for each query, suggested value: 5
+        """
+        content = []
+        metadata = []
+        seen_content = set() 
+        for collection_name, query in zip(collection_names, queries):
+            if collection_name and query:
+                retrieved_data = self.retriever.dense_retrieve(collection_name, query, top_k)
+                for result_list in retrieved_data:
+                    for doc in result_list:
+                        doc_content = content.append(doc.get('content', ''))
+                        doc_metadata = metadata.append(doc.get('metadata', {}))
+                        
+                        if doc_content not in seen_content:
+                            seen_content.add(doc_content)  
+                            content.append(doc_content)
+                            metadata.append(doc_metadata)
+                # results.append({
+                #     "query": query,
+                #     "collection_name": collection_name,
+                #     "retrieved_data": retrieved_data
+                # })
+        return {
+            "content": content,
+            "metadata": metadata
+        }
     
     def _calculator(self, expression: str) -> str:
         """

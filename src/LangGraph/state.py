@@ -1,8 +1,8 @@
-from pydantic import BaseModel
-from typing import Optional
 from LLMMA.output_pydantic import *
+from typing import Optional, TypedDict
+from pydantic import BaseModel, Field
 
-class OverallState(BaseModel):
+class OverallState(TypedDict):
     # Input
     user_query: str
     specific_collection: Optional[str] = None
@@ -18,3 +18,4 @@ class OverallState(BaseModel):
     # Output
     result: str = None
     repeat_times: int = 0
+    update_database: Optional[bool] = None
