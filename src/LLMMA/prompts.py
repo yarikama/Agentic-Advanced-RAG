@@ -320,11 +320,11 @@ Steps:
    d. If no similar query exists or the existing answer is significantly different:
       i. Prepare the question-answer pair:
          question = user_query
-         answer = summarizer's complete response
+         answer = summarizer's complete response without any modification
       ii. Use _insert_qa_into_db(chosen_collection, question, answer) to store the information.
    e. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
-
-Do not modify the summarizer's response in any way. Store and output it exactly as provided.
+   
+3. Output whether the insertion operation was successful or skipped and explain the reason in pydanctic object.
 """)
 
 DATABASE_UPDATER_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
@@ -341,13 +341,17 @@ Steps:
    b. If no similar query exists or the existing answer is significantly different:
       i. Prepare the question-answer pair:
          question = user_query
-         answer = summarizer's complete response
+         answer = summarizer's complete response without any modification
       ii. Use _insert_qa_into_db(specific_collection, question, answer) to store the information.
    c. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
 
-Do not modify the summarizer's response in any way. Store and output it exactly as provided.
+3. Output whether the insertion operation was successful or skipped and explain the reason in pydanctic object.
 """)
 
 DATABASE_UPDATER_EXPECTED_OUTPUT = dedent("""
-Output the result of the insertion operation or the reason for skipping insertion.
+A Pydantic object of type UpdateCondition with the following structure:
+UpdateCondition(
+    is_database_updated: bool,
+    reason: str
+)
 """)

@@ -83,6 +83,9 @@ class LLMMA_RAG_System:
             verbose=True,
         )
         self.crew.kickoff()
+        return {
+            "update_condition": self.tasks.create_database_updater_task.output.pydantic
+        }
     
     def overall_run(self, mode=str, new_query=None, new_collection=None):
         # Update the task with new query and collection

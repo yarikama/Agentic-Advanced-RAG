@@ -1,6 +1,5 @@
 from LLMMA import *
 from .state import OverallState
-from langgraph.graph import END
 
 class Nodes:
     def __init__(self, user_query: str, specific_collection: str):
@@ -23,10 +22,8 @@ class Nodes:
         }
 
     def database_update_node(self, state: OverallState):
-        self.rag_system.database_update_run()
-        return {
-            "update_database": True
-        }
+        return self.rag_system.database_update_run()
+        
         
     # Conditional Nodes
     def is_retrieval_needed(self, state: OverallState):

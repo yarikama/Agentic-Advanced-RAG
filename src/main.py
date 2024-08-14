@@ -1,8 +1,8 @@
 from LangGraph import WorkFlow
 from LangGraph.state import OverallState
 
-user_query = "where is the France?"
-specific_collection = "alice"
+user_query = "what is the importance of the character alice?"
+specific_collection = None
 
 workflow = WorkFlow(user_query , specific_collection)
 

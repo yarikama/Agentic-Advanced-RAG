@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-__all__ = ["UserQueryClassification", "Queries", "QueriesIdentification", "QueriesIdentificationList", "RefinedRetrievalData", "RankedRetrievalData", "AuditMetric", "AuditResult"]
+__all__ = ["UserQueryClassification", "Queries", "QueriesIdentification", "QueriesIdentificationList", "RefinedRetrievalData", "RankedRetrievalData", "AuditMetric", "AuditResult", "UpdateCondition"]
 
 # Pydantic Models For Task Outputs
 # For Classifier
@@ -48,7 +48,11 @@ class AuditResult(BaseModel):
     restart_required: bool
     additional_comments: Optional[str] = None
     
+class UpdateCondition(BaseModel):
+    is_database_updated: bool
+    reason: str
     
+
 # class RetrievalData(BaseModel):
 #     query: str
 #     needs_retrieval: bool
