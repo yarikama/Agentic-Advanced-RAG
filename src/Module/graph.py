@@ -1,14 +1,14 @@
 from langgraph.graph import StateGraph
 from .state import OverallState
-from .nodes import Nodes
+from .nodes import NodesModularRAG, NodesMultiAgentRAG
 
-class WorkFlow():
+class WorkFlowModularRAG():
     def __init__(self, query: str, collection: str):
         # Create the workflow(graph)
         workflow = StateGraph(OverallState)
         
         # Add nodes to the workflow
-        nodes = Nodes(query, collection)
+        nodes = NodesModularRAG(query, collection)
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
         workflow.add_node("retrieval_and_generation_node", nodes.retrieval_and_generation_node)
         workflow.add_node("generation_node", nodes.generation_node)
@@ -41,3 +41,18 @@ class WorkFlow():
         
         # Compile
         self.app = workflow.compile()
+        
+class WorkFlowMultiAgentRAG():
+    def __init__(self, query: str, collection: str):
+        # Create the workflow(graph)
+        workflow = StateGraph(OverallState)
+        
+        # Add nodes to the workflow
+        nodes = NodesMultiAgentRAG(query, collection)
+        workflow.add_node("overall_node", nodes.overall_node)
+        workflow.set_entry_point("overall_node")
+        workflow.set_finish_point("overall_node")
+        
+        # Compile
+        self.app = workflow.compile()
+        

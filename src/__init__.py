@@ -1,5 +1,5 @@
-from .LangGraph import *
-from .LLMMA import *
+from .Module import *
+from .MultiAgent import *
 from .Utils import *
 
-__all__ = ['LangGraph', 'LLMMA', 'Utils']
+__all__ = ['Module', 'MultiAgent', 'Utils']

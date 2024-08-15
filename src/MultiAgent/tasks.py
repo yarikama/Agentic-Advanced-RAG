@@ -64,6 +64,7 @@ class Tasks:
     # Getters for all tasks in overall process
     def get_sequential_tasks(self):
         return [
+            self.create_user_query_classification_task,
             self.create_plan_coordinator_task, # Only for Sequential Process because it is not needed in Hierarchical
             self.create_query_processor_task,
             self.create_classification_task,
@@ -77,6 +78,7 @@ class Tasks:
         
     def get_hierarchical_tasks(self):
         return [
+            self.create_user_query_classification_task,
             self.create_query_processor_task, # Plan Coordinator is included in manager_agent in Crew
             self.create_classification_task,
             self.create_retrieval_task,

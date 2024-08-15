@@ -1,4 +1,4 @@
-from LLMMA.output_pydantic import *
+from MultiAgent.output_pydantic import *
 from typing import Optional, TypedDict
 from pydantic import BaseModel, Field
 

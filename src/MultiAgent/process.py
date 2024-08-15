@@ -100,9 +100,16 @@ class LLMMA_RAG_System:
             verbose=True,
         )        
         self.crew.kickoff()        
-        result = self.tasks.create_summarizer_task.output
-        context = self.tasks.create_retrieval_task.output.pydantic
-        return result, context
+        return {
+            "user_query_classification": self.tasks.create_user_query_classification_task.output.pydantic,
+            "queries": self.tasks.create_query_processor_task.output.pydantic,
+            "queries_identification_list": self.tasks.create_classification_task.output.pydantic,
+            "refined_retrieval_data": self.tasks.create_retrieval_task.output.pydantic,
+            "ranked_retrieval_data": self.tasks.create_rerank_task.output.pydantic,
+            "result": self.tasks.create_summarizer_task.output,
+            "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
+            "update_condition": self.tasks.create_database_updater_task.output
+        }
         
 if __name__ == "__main__":
     pass

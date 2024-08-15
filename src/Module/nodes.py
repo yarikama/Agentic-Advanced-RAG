@@ -1,7 +1,7 @@
-from LLMMA import *
+from MultiAgent import *
 from .state import OverallState
 
-class Nodes:
+class NodesModularRAG():
     def __init__(self, user_query: str, specific_collection: str):
         self.rag_system = LLMMA_RAG_System()
         self.rag_system.tasks.update_task(user_query, specific_collection)
@@ -37,3 +37,12 @@ class Nodes:
             return "restart_needed"
         else:
             return "restart_not_needed"
+        
+        
+class NodesMultiAgentRAG():
+    def __init__(self, user_query: str, specific_collection: str):
+        self.rag_system = LLMMA_RAG_System()
+        self.rag_system.tasks.update_task(user_query, specific_collection)
+    
+    def overall_node(self, state: OverallState):
+        return self.rag_system.overall_run()
