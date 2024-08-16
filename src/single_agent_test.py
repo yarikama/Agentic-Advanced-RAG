@@ -1,5 +1,15 @@
-from SingleAgent.single_agent import SingleAgent
+from Module import *
+from Module.state import SingleState
 
-if __name__ == "__main__":
-    agent = SingleAgent()
-    agent.run("Who is alice's friend in the book?", "alice")
+user_query = "what is the importance of the character alice?"
+specific_collection = "alice"
+
+workflow = WorkFlowSingleAgentRAG(user_query , specific_collection)
+
+init_state = SingleState(
+    user_query=user_query,
+    specific_collection=specific_collection,
+)
+
+app = workflow.app
+app.invoke(init_state)

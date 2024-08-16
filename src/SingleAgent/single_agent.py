@@ -62,9 +62,7 @@ class SingleAgent:
         for item in filtered_data:
             context += item['content']
             context += '\n\n'
-        
-        print(f"context: {context}")
-        
+                
         template = """Use the following pieces of context to answer the question at the end.
         If you don't know the answer, just say that you don't know, don't try to make up an answer.
 
@@ -89,6 +87,9 @@ class SingleAgent:
         reranked_data = self.rerank(user_query, retrieved_data)
         # Generate the answer
         response = self.generation(user_query, reranked_data)
-        print(response)
-        
+        return {
+            "retreived_data": retrieved_data,
+            "reranked_data": reranked_data,
+            "result": response
+        }        
         
