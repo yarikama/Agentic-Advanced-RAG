@@ -1,5 +1,4 @@
-from Module import *
-from Module.state import SingleState
+from src.Module import *
 
 user_query = "what is the importance of the character alice?"
 specific_collection = "alice"
