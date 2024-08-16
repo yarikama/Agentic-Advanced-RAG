@@ -1,6 +1,6 @@
 from langgraph.graph import StateGraph
-from .state import OverallState
-from .nodes import NodesModularRAG, NodesMultiAgentRAG
+from .state import OverallState, SingleState
+from .nodes import NodesModularRAG, NodesMultiAgentRAG, NodesSingleAgentRAG
 
 class WorkFlowModularRAG():
     def __init__(self, query: str, collection: str):
@@ -52,6 +52,20 @@ class WorkFlowMultiAgentRAG():
         workflow.add_node("overall_node", nodes.overall_node)
         workflow.set_entry_point("overall_node")
         workflow.set_finish_point("overall_node")
+        
+        # Compile
+        self.app = workflow.compile()
+        
+class WorkFlowSingleAgentRAG():
+    def __init__(self, query: str, collection: str):
+        # Create the workflow(graph)
+        workflow = StateGraph(SingleState)
+        
+        # Add nodes to the workflow
+        nodes = NodesSingleAgentRAG(query, collection)
+        workflow.add_node("run_node", nodes.run_node)
+        workflow.set_entry_point("run_node")
+        workflow.set_finish_point("run_node")
         
         # Compile
         self.app = workflow.compile()

@@ -1,5 +1,6 @@
 from MultiAgent import *
-from .state import OverallState
+from SingleAgent import *
+from .state import OverallState, SingleState
 
 class NodesModularRAG():
     def __init__(self, user_query: str, specific_collection: str):
@@ -46,3 +47,12 @@ class NodesMultiAgentRAG():
     
     def overall_node(self, state: OverallState):
         return self.rag_system.overall_run()
+    
+class NodesSingleAgentRAG():
+    def __init__(self, user_query: str, specific_collection: str):
+        self.user_query = user_query
+        self.specific_collection = specific_collection
+        self.rag_system = SingleAgent()
+        
+    def run_node(self, state: SingleState):
+        return self.rag_system.run(self.user_query, self.specific_collection)

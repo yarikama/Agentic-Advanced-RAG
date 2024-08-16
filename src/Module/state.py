@@ -1,5 +1,5 @@
 from MultiAgent.output_pydantic import *
-from typing import Optional, TypedDict
+from typing import Optional, TypedDict, List
 from pydantic import BaseModel, Field
 
 class OverallState(TypedDict):
@@ -19,3 +19,12 @@ class OverallState(TypedDict):
     # Output
     result: str = None
     repeat_times: int = 0
+
+class SingleState(TypedDict):
+    user_query: str
+    specific_collection: Optional[str] = None
+    
+    # Output
+    retrived_data: Optional[List[dict]] = None
+    reranked_data: Optional[List[dict]] = None
+    result = str
