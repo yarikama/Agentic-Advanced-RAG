@@ -1,14 +1,21 @@
 from langgraph.graph import StateGraph
 from .state import OverallState, SingleState
 from .nodes import NodesModularRAG, NodesMultiAgentRAG, NodesSingleAgentRAG
+from Utils import *
+from Frontend import *
+from Config.rag_config import RAGConfig
 
 class WorkFlowModularRAG():
-    def __init__(self, query: str, collection: str):
+    def __init__(self, 
+                query: str, 
+                collection: str, 
+                rag_config: RAGConfig,
+                ):
         # Create the workflow(graph)
         workflow = StateGraph(OverallState)
         
         # Add nodes to the workflow
-        nodes = NodesModularRAG(query, collection)
+        nodes = NodesModularRAG(query, collection, rag_config)
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
         workflow.add_node("retrieval_and_generation_node", nodes.retrieval_and_generation_node)
         workflow.add_node("generation_node", nodes.generation_node)
@@ -43,12 +50,16 @@ class WorkFlowModularRAG():
         self.app = workflow.compile()
         
 class WorkFlowMultiAgentRAG():
-    def __init__(self, query: str, collection: str):
+    def __init__(self, 
+                query: str, 
+                collection: str, 
+                rag_config: RAGConfig,
+                ):        
         # Create the workflow(graph)
         workflow = StateGraph(OverallState)
         
         # Add nodes to the workflow
-        nodes = NodesMultiAgentRAG(query, collection)
+        nodes = NodesMultiAgentRAG(query, collection, rag_config)
         workflow.add_node("overall_node", nodes.overall_node)
         workflow.set_entry_point("overall_node")
         workflow.set_finish_point("overall_node")
@@ -57,12 +68,16 @@ class WorkFlowMultiAgentRAG():
         self.app = workflow.compile()
         
 class WorkFlowSingleAgentRAG():
-    def __init__(self, query: str, collection: str):
+    def __init__(self, 
+                query: str, 
+                collection: str, 
+                rag_config: RAGConfig,
+                ):        
         # Create the workflow(graph)
         workflow = StateGraph(SingleState)
         
         # Add nodes to the workflow
-        nodes = NodesSingleAgentRAG(query, collection)
+        nodes = NodesSingleAgentRAG(query, collection, rag_config)
         workflow.add_node("run_node", nodes.run_node)
         workflow.set_entry_point("run_node")
         workflow.set_finish_point("run_node")

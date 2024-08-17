@@ -3,14 +3,15 @@ from textwrap import dedent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from .tools import Tools
+from Frontend import * 
 
 class Agents:
-    def __init__(self, temperature: float, model_name: str, tools: Tools):
+    def __init__(self, temperature: float, model_name: str, tools: Tools, callback_function: CustomStreamlitCallbackHandler):
         load_dotenv()
         self.temperature = temperature
         self.tools = tools
         self.model_name = model_name
-    
+        self.callback_function = callback_function
         if self.model_name != "crewAI-llama3":
             self.llm = ChatOpenAI(
                 model = self.model_name,
@@ -107,6 +108,7 @@ class Agents:
         llm=self.llm,
         memory=True,
         allow_delegation=False,
+        callbacks=[self.callback_function],
     )
         
     def _plan_coordinator(self):
@@ -122,6 +124,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
         
     def _query_processor(self):
@@ -136,6 +139,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
         
     def _retriever(self):
@@ -151,6 +155,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
         
     def _reranker(self):
@@ -167,6 +172,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
 
     def _generator(self):
@@ -181,6 +187,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
         
     def _summarizer(self):
@@ -195,6 +202,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
         
     def _response_auditor(self):
@@ -209,6 +217,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )
 
         
@@ -225,4 +234,5 @@ class Agents:
             memory=True,
             cache=True,
             allow_delegation=False,
+            callbacks=[self.callback_function],
         )

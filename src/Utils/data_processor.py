@@ -9,11 +9,11 @@ from tqdm import tqdm
 from nltk.corpus import words
 from dotenv import load_dotenv
 from .embedder import Embedder
-from . import constants as const
+from ..Config import constants as const
 from datasets import load_dataset
 from .vector_database import VectorDatabase
 from langchain.schema.document import Document
-from typing import List, Union, Dict, Generator
+from typing import List, Union, Dict, Generator, Optional
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain_community.document_loaders import (
     JSONLoader,
@@ -44,9 +44,9 @@ def chunked_iterable(iterable, size):
         
 
 class DataProcessor:
-    def __init__(self, vectordatabase: VectorDatabase, embedder: Embedder):
-        self.vectordatabase = vectordatabase
-        self.embedder = embedder
+    def __init__(self, vectordatabase: Optional[VectorDatabase] = None, embedder: Optional[Embedder] = None):
+        self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
+        self.embedder = embedder if embedder else Embedder()
         nltk.download('words')
         self.ntlk_word = words.words()
         print("Data Processor initialized")

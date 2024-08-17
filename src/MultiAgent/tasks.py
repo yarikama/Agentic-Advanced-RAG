@@ -1,9 +1,11 @@
 from .tools import Tools
 from .agents import Agents
-from .output_pydantic import *
+from ..Config.output_pydantic import *
 from crewai import Task
 from typing import List
-from .prompts import *
+from ..Config.task_prompts import *
+from Frontend import *
+
 
 # All Tasks
 class Tasks:
@@ -12,6 +14,7 @@ class Tasks:
         self.agents = agents
         self.user_query = ""
         self.specific_collection = ""
+        self.is_callback = False
         print("Tasks initialized")
         
     # Update the task with new query and collection
@@ -31,7 +34,7 @@ class Tasks:
         self.create_summarizer_task = self._summarizer_task([self.create_generation_task])
         self.create_response_auditor_task = self._response_auditor_task([self.create_summarizer_task])
         self.create_database_updater_task = self._database_updater_task([self.create_user_query_classification_task, self.create_summarizer_task, self.create_response_auditor_task])
-    
+        
     # Getters for all tasks in nodes
     def get_user_query_classification_node_task(self):
         return [
@@ -96,6 +99,7 @@ class Tasks:
             description=USER_QUERY_CLASSIFICATION_PROMPT.format(user_query=self.user_query),
             expected_output=USER_QUERY_CLASSIFICATION_EXPECTED_OUTPUT,
             output_pydantic=UserQueryClassification,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _plan_coordinator_task(self): 
@@ -103,6 +107,7 @@ class Tasks:
             agent=self.agents.create_plan_coordinator,
             description=PLAN_COORDINATOR_PROMPT.format(user_query=self.user_query),
             expected_output=PLAN_COORDINATOR_EXPECTED_OUTPUT,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _query_processor_task(self):
@@ -111,6 +116,7 @@ class Tasks:
             description=QUERY_PROCESSOR_PROMPT.format(user_query=self.user_query),
             expected_output=QUERY_PROCESSOR_EXPECTED_OUTPUT,
             output_pydantic=Queries,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _classification_task(self, context_task_array: List[Task]):
@@ -127,6 +133,7 @@ class Tasks:
             output_pydantic=QueriesIdentificationList,
             context=context_task_array,
             tools=toolkit,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
 
     def _retrieval_task(self, context_task_array: List[Task]):
@@ -137,6 +144,7 @@ class Tasks:
             output_pydantic=RefinedRetrievalData,
             context=context_task_array,
             tools=self.tools.get_retrieve_toolkit(),
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
 
     def _rerank_task(self, context_task_array: List[Task]):
@@ -147,6 +155,7 @@ class Tasks:
             output_pydantic=RankedRetrievalData,
             context=context_task_array,
             tools=self.tools.get_reranker_toolkit(), 
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _generation_task(self, context_task_array: List[Task]):
@@ -155,6 +164,7 @@ class Tasks:
             description=GENERATION_PROMPT.format(user_query=self.user_query),
             expected_output=GENERATION_EXPECTED_OUTPUT,
             context=context_task_array,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _summarizer_task(self, context_task_array: List[Task]):
@@ -162,7 +172,8 @@ class Tasks:
             agent=self.agents.create_summarizer,
             description=SUMMARIZER_PROMPT.format(user_query=self.user_query),
             expected_output=SUMMARIZER_EXPECTED_OUTPUT,
-            context=context_task_array
+            context=context_task_array,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _response_auditor_task(self, context_task_array: List[Task]):
@@ -172,6 +183,7 @@ class Tasks:
             expected_output=RESPONSE_AUDITOR_EXPECTED_OUTPUT,
             output_pydantic=AuditResult,
             context=context_task_array,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )        
         
     def _database_updater_task(self, context_task_array: List[Task]):
@@ -187,4 +199,5 @@ class Tasks:
             expected_output=DATABASE_UPDATER_EXPECTED_OUTPUT,
             context=context_task_array,
             tools=toolkit,
+            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )

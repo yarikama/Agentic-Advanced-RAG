@@ -1,10 +1,17 @@
 from MultiAgent import *
 from SingleAgent import *
 from .state import OverallState, SingleState
-
+from Frontend import *
+from Utils import *
+from Config.rag_config import RAGConfig
 class NodesModularRAG():
-    def __init__(self, user_query: str, specific_collection: str):
-        self.rag_system = LLMMA_RAG_System()
+    def __init__(self, 
+                user_query: str, 
+                specific_collection: str, 
+                rag_config: RAGConfig,
+                ):
+        
+        self.rag_system = LLMMA_RAG_System(rag_config)
         self.rag_system.tasks.update_task(user_query, specific_collection)
     
     # Action Nodes
@@ -18,8 +25,11 @@ class NodesModularRAG():
         return self.rag_system.generation_run()
         
     def repeat_count_node(self, state: OverallState):
+        repeat_times = state["repeat_times"]
+        if repeat_times is None:
+            repeat_times = 0
         return {
-            "repeat_times": state["repeat_times"] + 1
+            "repeat_times": repeat_times+1
         }
 
     def database_update_node(self, state: OverallState):
@@ -41,18 +51,28 @@ class NodesModularRAG():
         
         
 class NodesMultiAgentRAG():
-    def __init__(self, user_query: str, specific_collection: str):
-        self.rag_system = LLMMA_RAG_System()
+    def __init__(self, 
+                user_query: str, 
+                specific_collection: str, 
+                rag_config: RAGConfig,
+                ):
+        
+        self.rag_system = LLMMA_RAG_System(rag_config)
         self.rag_system.tasks.update_task(user_query, specific_collection)
     
     def overall_node(self, state: OverallState):
         return self.rag_system.overall_run()
     
 class NodesSingleAgentRAG():
-    def __init__(self, user_query: str, specific_collection: str):
+    def __init__(self, 
+                user_query: str, 
+                specific_collection: str, 
+                rag_config: RAGConfig,
+                ):
+        
         self.user_query = user_query
         self.specific_collection = specific_collection
-        self.rag_system = SingleAgent()
+        self.rag_system = SingleAgent(rag_config)
         
     def run_node(self, state: SingleState):
         return self.rag_system.run(self.user_query, self.specific_collection)

@@ -2,26 +2,32 @@ from dotenv import load_dotenv
 from crewai import Crew, Process
 
 from Utils import *
-import Utils.constants as const
+import src.Config.constants as const
 
 
 from .tools import Tools
 from .tasks import Tasks
 from .agents import Agents
 
+from Config.rag_config import RAGConfig
+
 load_dotenv()
 
 class LLMMA_RAG_System:
-    def __init__(self, vectordatabase: VectorDatabase = None, embedder: Embedder = None):
+    def __init__(self, rag_config: RAGConfig):
+        # LLM Settings
+        self.model_name = rag_config.model_name if rag_config.model_name else const.MODEL_NAME
+        self.model_temperature = rag_config.temperature if rag_config.temperature else const.MODEL_TEMPERATURE  
+        # Callback
+        self.callback_function = rag_config.callback_function
         # Utils
-        self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
-        self.embedder = embedder if embedder else Embedder()
+        self.vectordatabase = rag_config.vector_database if rag_config.vector_database else VectorDatabase()
+        self.embedder = rag_config.embedder if rag_config.embedder else Embedder()
         self.retriever = Retriever(self.vectordatabase, self.embedder)
         self.data_processor = DataProcessor(self.vectordatabase, self.embedder)
-                
         # Tools, Agents, Tasks
         self.tools = Tools(self.vectordatabase, self.embedder, self.retriever, self.data_processor)
-        self.agents = Agents(const.MODEL_TEMPERATURE, const.MODEL_NAME, self.tools)
+        self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
         self.tasks = Tasks(self.agents, self.tools)
         
         print("LLMMA RAG System initialized")

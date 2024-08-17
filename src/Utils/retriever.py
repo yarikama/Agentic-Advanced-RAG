@@ -2,16 +2,16 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from .embedder import Embedder
-from . import constants as const
+from ..Config import constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
-from typing import List, Dict, Any, Union
+from typing import List, Dict, Any, Union, Optional
 load_dotenv()
 
 class Retriever:
-    def __init__(self, vectordatabase: VectorDatabase, embedder: Embedder):
-        self.embedder = embedder
-        self.vectordatabase = vectordatabase
+    def __init__(self, vectordatabase: Optional[VectorDatabase] = None, embedder: Optional[Embedder] = None):
+        self.embedder = embedder if embedder else Embedder()
+        self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=self.openai_api_key)
         print("Retriever initialized")

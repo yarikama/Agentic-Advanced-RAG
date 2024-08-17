@@ -1,4 +1,4 @@
-from MultiAgent.output_pydantic import *
+from src.Config.output_pydantic import *
 from typing import Optional, TypedDict, List
 from pydantic import BaseModel, Field
 

@@ -25,9 +25,9 @@ class RAGEvaluator:
         
         for _, row in df.iterrows():
             eval_data["question"].append(row['question'])
-            eval_data["contexts"].append([row['retrieved_context']])  # 注意這裡是一個嵌套列表
+            eval_data["contexts"].append([row['retrieved_context']])  
             eval_data["answer"].append(row['generated_response'])
-            eval_data["ground_truths"].append([row['answer']])  # 注意這裡也是一個嵌套列表
+            eval_data["ground_truths"].append([row['answer']])  
         
         return Dataset.from_dict(eval_data)
 
