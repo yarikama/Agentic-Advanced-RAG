@@ -1,7 +1,11 @@
+import json, os
 import pandas as pd
+import numpy as np
+from sklearn.cluster import KMeans
 from . import constants as const
+from .embedder import Embedder
 from typing import List, Dict, Any
-from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient
+from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient, AnnSearchRequest
 
 class VectorDatabase:
     def __init__(self, 
@@ -175,6 +179,104 @@ class VectorDatabase:
         contents = [self.get_content_from_hits(hits) for hits in milvus_results]
 
         return contents
+    
+    def get_all_entities(self, 
+                         collection_name: str):
+        
+        collection = self.get_collection(collection_name)
+        collection.load()
+        
+        embedder = Embedder()
+        test_text = embedder.embed_dense("test")
+    
+        dense_index_params = {
+            "metric_type": "COSINE",
+            # "index_type": "HNSW",
+            "params": {"M": 16, "efConstruction": 200}
+        } 
+        
+        iterator = collection.search_iterator(data = test_text,
+                                              anns_field="dense_vector",
+                                              batch_size=1000,
+                                              param=dense_index_params,
+                                              output_fields=["id","dense_vector","sparse_vector","content","metadata"],
+                                              limit=-1)
+        file_count = 0
+        while True:
+            result = iterator.next()
+            if not result:
+                iterator.close()
+                break
+            
+            data = []
+            for hit in result:               
+                record = {
+                    "id": hit.id,  # ID
+                    "dense_vector": hit.dense_vector,  
+                    "sparse_vector": hit.sparse_vector,  
+                    "content": hit.content,  
+                    "metadata": hit.metadata
+                }
+                data.append(record)
+            data_json =json.dumps(data,indent=5)
+            
+            file_name = f'../tests/{collection_name}_json/all_entities_{file_count}.json'
+        
+            with open(file_name, 'w') as f:
+                f.write(data_json)
+
+            file_count = file_count + 1
+        
+        return data
+    
+    def Kmeans_clustering(self, 
+                          collection_name: str,
+                          k):
+            
+        json_folder_path = f'../tests/{collection_name}_json'
+        #read json get vector
+        vectors = []
+        for filename in os.listdir(json_folder_path):
+            if filename.endswith('.json'):
+                file_path = os.path.join(json_folder_path, filename)
+                
+                with open(file_path, 'r') as f:
+                    data = json.load(f)
+                    for item in data:
+                        vectors.append(item['dense_vector'])
+        vectors_array = np.array(vectors)
+        
+        #do kmeans
+        kmeans = KMeans(n_clusters=k, random_state=0)
+        kmeans.fit(vectors_array)
+        cluster_centers = kmeans.cluster_centers_
+        cluster_centers = cluster_centers.tolist()
+        
+        result = []
+        for center in cluster_centers:
+            #change format to search_format
+            data = []
+            center = np.array(center)
+            data.append(center)
+            
+            #search center
+            search_req = {
+                "data": data,
+                "anns_field": "dense_vector",
+                "param": {"metric_type": "COSINE", "params": {}},
+                "limit": 1
+            }
+            search_req = AnnSearchRequest(**search_req)
+        
+            res = self.search(
+                collection_name=collection_name,
+                search_request=search_req,
+                top_k=1
+            )
+            result.append(res)
+            print(res)
+    
+        return result 
 
 
 if __name__ == "__main__":
