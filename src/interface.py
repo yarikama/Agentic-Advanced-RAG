@@ -49,7 +49,7 @@ with modular_rag_tab:
                     app.invoke(initState)
                 
                 with st.expander("Log"):
-                    run_rag_workflow()
+                    st.write(run_rag_workflow())
                 # thread = threading.Thread(target=run_rag_workflow)
                 # thread.start()
                 

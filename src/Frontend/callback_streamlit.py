@@ -64,13 +64,11 @@ class CustomStreamlitCallbackHandler(BaseCallbackHandler):
     def on_chain_start(self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any) -> None:
         """Print out that we are entering a chain."""
         class_name = serialized.get("name", serialized.get("id", ["<unknown>"])[-1])
-        print("Chain started")
         st.markdown(f"Entering new {class_name} chain...")
 
     @with_streamlit_context
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
         """Print out that we finished a chain."""
-        print("Chain started")
         st.write("Finished chain.")
 
     @with_streamlit_context
