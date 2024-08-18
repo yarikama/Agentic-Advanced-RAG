@@ -47,7 +47,7 @@ class WorkFlowModularRAG():
         )
         
         # Compile
-        self.app = workflow.compile()
+        self.graph = workflow.compile()
         
 class WorkFlowMultiAgentRAG():
     def __init__(self, 
@@ -65,7 +65,7 @@ class WorkFlowMultiAgentRAG():
         workflow.set_finish_point("overall_node")
         
         # Compile
-        self.app = workflow.compile()
+        self.graph = workflow.compile()
         
 class WorkFlowSingleAgentRAG():
     def __init__(self, 
@@ -83,5 +83,5 @@ class WorkFlowSingleAgentRAG():
         workflow.set_finish_point("run_node")
         
         # Compile
-        self.app = workflow.compile()
+        self.graph = workflow.compile()
         

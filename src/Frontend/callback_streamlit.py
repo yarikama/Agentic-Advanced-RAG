@@ -123,44 +123,25 @@ class CustomStreamlitCallbackHandler(BaseCallbackHandler):
 
 class ImprovedCustomStreamlitCallbackHandler(BaseCallbackHandler):
     """Improved Callback Handler that safely updates Streamlit UI."""
-    def __init__(self):
-        self.lock = Lock()
-        self.message_queue = queue.Queue()
-
-    def _queue_message(self, message_type: str, content: Any):
-        self.message_queue.put((message_type, content))
-
+    def __init__(self, container):
+        self.container = container
+    
+    @with_streamlit_context
     def on_chain_start(self, serialized: Dict[str, Any], inputs: Dict[str, Any], **kwargs: Any) -> None:
         class_name = serialized.get("name", serialized.get("id", ["<unknown>"])[-1])
-        self._queue_message("chain_start", f"Entering new {class_name} chain...")
-        
+        self.container.markdown(f"Starting: {class_name}")
 
+    @with_streamlit_context
     def on_chain_end(self, outputs: Dict[str, Any], **kwargs: Any) -> None:
-        self._queue_message("chain_end", "Finished chain.")
-
-    def on_agent_action(self, action: AgentAction, **kwargs: Any) -> Any:
-        self._queue_message("agent_action", action.log)
-
+        self.container.markdown("Chain completed")
+        
+    @with_streamlit_context
     def on_tool_start(self, serialized: Dict[str, Any], input_str: str, **kwargs: Any) -> Any:
-        self._queue_message("tool_start", (serialized, input_str))
+        self.container.markdown(f"Starting tool: {serialized.get('name', 'Unknown tool')}")
 
+    @with_streamlit_context
     def on_tool_end(self, output: str, **kwargs: Any) -> None:
-        self._queue_message("tool_end", output)
-
-    def on_text(self, text: str, **kwargs: Any) -> None:
-        self._queue_message("text", text)
-
-    def on_agent_finish(self, finish: AgentFinish, **kwargs: Any) -> None:
-        self._queue_message("agent_finish", finish.log)
-
-    def process_messages(self):
-        messages = []
-        while not self.message_queue.empty():
-            try:
-                messages.append(self.message_queue.get_nowait())
-            except queue.Empty:
-                break
-        return messages
+        self.container.markdown(f"Tool output: {output}")
 
 
 def render_streamlit_messages(messages: List[tuple]):

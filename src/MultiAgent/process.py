@@ -39,6 +39,7 @@ class LLMMA_RAG_System:
             tasks=self.tasks.get_user_query_classification_node_task(),
             process=Process.sequential,
             verbose=True,
+            output_log_file="logs.txt",
         )
         return {
             "user_query_classification": self.crew.kickoff().pydantic
@@ -51,6 +52,7 @@ class LLMMA_RAG_System:
             tasks=self.tasks.get_retrieval_and_generation_node_tasks(),
             process=Process.sequential,
             verbose=True,
+            output_log_file="logs.txt",
         )
         self.crew.kickoff()
         return {
@@ -69,6 +71,7 @@ class LLMMA_RAG_System:
             tasks=self.tasks.get_generation_node_tasks(),
             process=Process.sequential,
             verbose=True,
+            output_log_file="logs.txt",
         )
         self.crew.kickoff()
         return {
@@ -87,6 +90,7 @@ class LLMMA_RAG_System:
             tasks=self.tasks.get_database_update_node_task(),
             process=Process.sequential,
             verbose=True,
+            output_log_file="logs.txt",
         )
         self.crew.kickoff()
         return {
@@ -103,7 +107,7 @@ class LLMMA_RAG_System:
             agents=self.agents.get_sequential_agents() if mode == "sequential" else self.agents.get_hierarchical_agents(),
             tasks=self.tasks.get_sequential_tasks() if mode == "sequential" else self.tasks.get_hierarchical_tasks(),
             process=Process.sequential if mode == "sequential" else Process.hierarchical,
-            output_log_file=True,
+            output_log_file="logs.txt",
             verbose=True,
         )        
         self.crew.kickoff()        

@@ -8,7 +8,7 @@ from Frontend import *
 parent_container = st.container()
 
 # 配置回調處理器
-callback_handler = CustomStreamlitCallbackHandler()
+callback_handler = ImprovedCustomStreamlitCallbackHandler(st.container())
 
 # 配置 RAG 系統
 rag_config = RAGConfig(

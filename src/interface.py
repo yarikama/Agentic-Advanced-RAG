@@ -10,6 +10,7 @@ from langchain_community.callbacks.streamlit import (
 )
 import threading
 import time
+import asyncio
 
 modular_rag_tab, build_tab, evaluation_tab = st.tabs(["Modular RAG Chatbot", "Build From Data", "Evaluation"])
 
@@ -30,33 +31,28 @@ with modular_rag_tab:
     st.subheader("User Input")
     choose_collection = st.selectbox("Select Your Collection", collections, index=len(collections)-1, key="choose_collection")
     user_query = st.text_input("User Query", "What is the capital of France?")
-    output_container = st.container()
-    callback = CustomStreamlitCallbackHandler()
+    # output_container = st.container()
+    output_container = st.expander("Output")
+    # callback = CustomStreamlitCallbackHandler()
     # callback = StreamlitCallbackHandler(st.container())
-    with output_container:
-        rag_config = RAGConfig(
-            model_name=model_select,
-            model_temperature=model_temperature,
-            vector_database=vector_database,
-            callback_function=callback
-        )
-        if st.button("RAG Run!"):
+    # callback = None
+    callback = ImprovedCustomStreamlitCallbackHandler(output_container)
+    rag_config = RAGConfig(
+        model_name=model_select,
+        model_temperature=model_temperature,
+        vector_database=vector_database,
+        callback_function=callback
+    )
+    if st.button("RAG Run!"):
+        with output_container:
             with st.spinner('Processing...'):
                 def run_rag_workflow():
-                    ragSystem = WorkFlowModularRAG(user_query, choose_collection, rag_config)
+                    rag_system = WorkFlowModularRAG(user_query, choose_collection, rag_config)
                     initState = OverallState(user_query=user_query, collection=choose_collection)
-                    app = ragSystem.app
-                    app.invoke(initState)
-                
-                with st.expander("Log"):
-                    st.write(run_rag_workflow())
-                # thread = threading.Thread(target=run_rag_workflow)
-                # thread.start()
-                
-                # while thread.is_alive():
-                #     time.sleep(0.1)
-                    
-                
+                    for result in rag_system.graph.stream(initState):
+                        st.write(result)
+                run_rag_workflow()
+
 
     
     
