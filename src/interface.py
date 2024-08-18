@@ -4,7 +4,12 @@ from Module import *
 import streamlit as st
 from crewai.tasks.task_output import TaskOutput
 from Frontend import *
-
+from Config.rag_config import RAGConfig
+from langchain_community.callbacks.streamlit import (
+    StreamlitCallbackHandler,
+)
+import threading
+import time
 
 modular_rag_tab, build_tab, evaluation_tab = st.tabs(["Modular RAG Chatbot", "Build From Data", "Evaluation"])
 
@@ -15,25 +20,43 @@ model_select = st.sidebar.selectbox("Select Model",
                                     key="model_select")
 
 model_temperature = st.sidebar.slider("Model Temperature", 0.0, 1.0, 0.1, 0.1)
-
+vector_database = VectorDatabase()
+collections = vector_database.list_collections()
+collections.append("None")
 with modular_rag_tab:
     st.header("Modular RAG Chatbot")
     st.markdown("We will be using the Modular RAG Chatbot for this demo.")
     st.markdown(f"You are now using model: `{model_select}` with temperature: `{model_temperature}`, change the model and temperature in the sidebar.")
     st.subheader("User Input")
-    vector_database = VectorDatabase()
-    collections = vector_database.list_collections()
-    collections.append("None")
-    vector_database.disconnect()
     choose_collection = st.selectbox("Select Your Collection", collections, index=len(collections)-1, key="choose_collection")
     user_query = st.text_input("User Query", "What is the capital of France?")
-    output_container = st.empty()
-    if st.button("Submit"):
-        with output_container:
-            ragSystem = WorkFlowModularRAG(user_query, choose_collection)
-            initState = OverallState(user_query=user_query, collection=choose_collection)
-            app = ragSystem.app
-            app.invoke(initState)
+    output_container = st.container()
+    callback = CustomStreamlitCallbackHandler()
+    # callback = StreamlitCallbackHandler(st.container())
+    with output_container:
+        rag_config = RAGConfig(
+            model_name=model_select,
+            model_temperature=model_temperature,
+            vector_database=vector_database,
+            callback_function=callback
+        )
+        if st.button("RAG Run!"):
+            with st.spinner('Processing...'):
+                def run_rag_workflow():
+                    ragSystem = WorkFlowModularRAG(user_query, choose_collection, rag_config)
+                    initState = OverallState(user_query=user_query, collection=choose_collection)
+                    app = ragSystem.app
+                    app.invoke(initState)
+                
+                with st.expander("Log"):
+                    run_rag_workflow()
+                # thread = threading.Thread(target=run_rag_workflow)
+                # thread.start()
+                
+                # while thread.is_alive():
+                #     time.sleep(0.1)
+                    
+                
 
     
     

@@ -2,7 +2,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from .embedder import Embedder
-from ..Config import constants as const
+from Config import constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
 from typing import List, Dict, Any, Union, Optional

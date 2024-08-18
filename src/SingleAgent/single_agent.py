@@ -3,7 +3,7 @@ from Utils import *
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import List
 from langchain_openai import ChatOpenAI
-from src.Config import constants as c
+from Config import constants as c
 from langchain_core.prompts import PromptTemplate
 from langchain_core.output_parsers import StrOutputParser
 from dotenv import load_dotenv
@@ -21,8 +21,8 @@ class SingleAgent:
         self.rerank_tokenizer = AutoTokenizer.from_pretrained("BAAI/bge-reranker-large")
         self.reranker = AutoModelForSequenceClassification.from_pretrained("BAAI/bge-reranker-large")
         self.llm = ChatOpenAI(
-            model=c.MODEL_NAME,
-            temperature=c.MODEL_TEMPERATURE,
+            model=rag_config.model_name if rag_config.model_name else c.MODEL_NAME,
+            temperature=rag_config.model_temperature if rag_config.model_temperature else c.MODEL_TEMPERATURE,
         )
         self.user_query = ""
         self.specific_collection = ""

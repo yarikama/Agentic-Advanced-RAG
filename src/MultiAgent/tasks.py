@@ -1,9 +1,9 @@
 from .tools import Tools
 from .agents import Agents
-from ..Config.output_pydantic import *
+from Config.output_pydantic import *
 from crewai import Task
 from typing import List
-from ..Config.task_prompts import *
+from Config.task_prompts import *
 from Frontend import *
 
 

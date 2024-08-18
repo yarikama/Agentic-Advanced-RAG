@@ -1,4 +1,4 @@
-from src.Config.output_pydantic import *
+from Config.output_pydantic import *
 from typing import Optional, TypedDict, List
 from pydantic import BaseModel, Field
 

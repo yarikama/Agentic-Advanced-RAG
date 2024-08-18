@@ -9,7 +9,7 @@ from tqdm import tqdm
 from nltk.corpus import words
 from dotenv import load_dotenv
 from .embedder import Embedder
-from ..Config import constants as const
+from Config import constants as const
 from datasets import load_dataset
 from .vector_database import VectorDatabase
 from langchain.schema.document import Document

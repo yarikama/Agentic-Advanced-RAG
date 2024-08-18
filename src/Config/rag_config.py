@@ -7,7 +7,7 @@ from .constants import MODEL_NAME, MODEL_TEMPERATURE
 @dataclass
 class RAGConfig:
     model_name: str = MODEL_NAME
-    temperature: float = MODEL_TEMPERATURE
+    model_temperature: float = MODEL_TEMPERATURE
     vector_database: Optional['VectorDatabase'] = None
     embedder: Optional['Embedder'] = None
     callback_function: Optional['CustomStreamlitCallbackHandler'] = None

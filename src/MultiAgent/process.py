@@ -2,7 +2,7 @@ from dotenv import load_dotenv
 from crewai import Crew, Process
 
 from Utils import *
-import src.Config.constants as const
+import Config.constants as const
 
 
 from .tools import Tools
@@ -17,7 +17,7 @@ class LLMMA_RAG_System:
     def __init__(self, rag_config: RAGConfig):
         # LLM Settings
         self.model_name = rag_config.model_name if rag_config.model_name else const.MODEL_NAME
-        self.model_temperature = rag_config.temperature if rag_config.temperature else const.MODEL_TEMPERATURE  
+        self.model_temperature = rag_config.model_temperature if rag_config.model_temperature else const.MODEL_TEMPERATURE  
         # Callback
         self.callback_function = rag_config.callback_function
         # Utils
@@ -99,6 +99,7 @@ class LLMMA_RAG_System:
         
         # Crew with process
         self.crew = Crew(  
+            manager_agent=self.agents.create_plan_coordinator if mode != "Sequential" else None,
             agents=self.agents.get_sequential_agents() if mode == "sequential" else self.agents.get_hierarchical_agents(),
             tasks=self.tasks.get_sequential_tasks() if mode == "sequential" else self.tasks.get_hierarchical_tasks(),
             process=Process.sequential if mode == "sequential" else Process.hierarchical,
