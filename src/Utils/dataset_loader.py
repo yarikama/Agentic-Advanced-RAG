@@ -71,6 +71,7 @@ class DatasetLoader:
 
     def _process_natural_questions(self, df: pd.DataFrame) -> Tuple[List[Dict[str, Union[str, Dict]]], pd.DataFrame]:
         documents = []
+        previous_document = None
         for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing Natural Questions"):
             # 將 tokens 轉換為文本
             content = ' '.join(row['document']['tokens'])
@@ -82,7 +83,10 @@ class DatasetLoader:
                     "title": row['document']['title'],
                 }
             }
+            if document == previous_document:
+                continue
             documents.append(document)
+            previous_document = document
 
         # 添加新列到原始 DataFrame
         df['generated_response'] = ''
@@ -92,6 +96,7 @@ class DatasetLoader:
 
     def _process_trivia_qa(self, df: pd.DataFrame) -> Tuple[List[Dict[str, Union[str, Dict]]], pd.DataFrame]:
         documents = []
+        previous_document = None
         for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing Trivia QA"):
             # 使用 wiki_context 作為主要內容，如果可用的話
             if 'entity_pages' in row and 'wiki_context' in row['entity_pages']:
@@ -103,8 +108,11 @@ class DatasetLoader:
                             "title": title,
                         }
                     }
+                    if document == previous_document:
+                        continue
                     documents.append(document)
-            
+                    previous_document = document
+                    
             # 使用 search_results 作為備用或額外的內容
             if 'search_results' in row and 'search_context' in row['search_results']:
                 for title, context in zip(row['search_results']['title'], row['search_results']['search_context']):
@@ -116,8 +124,11 @@ class DatasetLoader:
                             "type": "search_context"
                         }
                     }
+                    if document == previous_document:
+                        continue
                     documents.append(document)
-
+                    previous_document = document
+                    
         # 添加新列到原始 DataFrame
         df['generated_response'] = ''
         df['retrieved_context'] = ''
@@ -126,7 +137,8 @@ class DatasetLoader:
 
     def _process_hotpot_qa(self, df: pd.DataFrame) -> Tuple[List[Dict[str, Union[str, Dict]]], pd.DataFrame]:
         documents = []
-        for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing Natural Questions"):
+        previous_document = None
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing Hot Pot QA"):
             for title, sentences in zip(row['context']['title'], row['context']['sentences']):
                 content = f"Title: {title}\nContent: {' '.join(sentences)}"
                 
@@ -134,13 +146,16 @@ class DatasetLoader:
                     "content": content.strip(),
                     "metadata": {
                         "dataset_name": "hotpot_qa",
-                        "level": row['level'],
-                        "type": row['type'],
+                        # "level": row['level'],
+                        # "type": row['type'],
                         "title": title
                     }
                 }
+                if document == previous_document:
+                    continue
                 documents.append(document)
-
+                previous_document = document
+                
         # 添加新列到原始 DataFrame
         df['generated_response'] = ''
         df['retrieved_context'] = ''

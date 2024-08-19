@@ -1,6 +1,7 @@
 __pycache__/
+.parquet/
 volumes/
 .corpus/
 .data/
-.env
 .tmp/
+.env
