@@ -3,3 +3,4 @@ volumes/
 .corpus/
 .data/
 .env
+.tmp/
