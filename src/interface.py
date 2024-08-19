@@ -11,6 +11,23 @@ from langchain_community.callbacks.streamlit import (
 import threading
 import time
 import asyncio
+from pydantic import BaseModel
+from typing import TypedDict
+
+if 'vector_database' not in st.session_state:
+    st.session_state.vector_database = VectorDatabase()
+if 'embedder' not in st.session_state:
+    st.session_state.embedder = Embedder()
+if 'data_processor' not in st.session_state:
+    st.session_state.data_processor = DataProcessor(st.session_state.vector_database, st.session_state.embedder)
+if 'collections' not in st.session_state:
+    st.session_state.collections = st.session_state.vector_database.list_collections()
+    st.session_state.collections.append("None")
+if 'dataset_loader' not in st.session_state:
+    st.session_state.dataset_loader = DatasetLoader()
+
+
+    
 
 modular_rag_tab, build_tab, evaluation_tab = st.tabs(["Modular RAG Chatbot", "Build From Data", "Evaluation"])
 
@@ -21,59 +38,65 @@ model_select = st.sidebar.selectbox("Select Model",
                                     key="model_select")
 
 model_temperature = st.sidebar.slider("Model Temperature", 0.0, 1.0, 0.1, 0.1)
-vector_database = VectorDatabase()
-collections = vector_database.list_collections()
-collections.append("None")
+
 with modular_rag_tab:
     st.header("Modular RAG Chatbot")
     st.markdown("We will be using the Modular RAG Chatbot for this demo.")
     st.markdown(f"You are now using model: `{model_select}` with temperature: `{model_temperature}`, change the model and temperature in the sidebar.")
     st.subheader("User Input")
-    choose_collection = st.selectbox("Select Your Collection", collections, index=len(collections)-1, key="choose_collection")
-    user_query = st.text_input("User Query", "What is the capital of France?")
-    # output_container = st.container()
-    output_container = st.expander("Output")
-    # callback = CustomStreamlitCallbackHandler()
-    # callback = StreamlitCallbackHandler(st.container())
-    # callback = None
-    callback = ImprovedCustomStreamlitCallbackHandler(output_container)
-    rag_config = RAGConfig(
-        model_name=model_select,
-        model_temperature=model_temperature,
-        vector_database=vector_database,
-        callback_function=callback
-    )
+    choose_collection = st.selectbox("Select Your Collection", st.session_state.collections, index=0, key="choose_collection")
+    user_query = st.text_input("User Query", "Who helps alice the most in the book?")
     if st.button("RAG Run!"):
-        with output_container:
-            with st.spinner('Processing...'):
-                def run_rag_workflow():
-                    rag_system = WorkFlowModularRAG(user_query, choose_collection, rag_config)
-                    initState = OverallState(user_query=user_query, collection=choose_collection)
-                    for result in rag_system.graph.stream(initState):
-                        st.write(result)
-                run_rag_workflow()
+        output_log = st.empty()
+        with output_log.container():                             
+            def run_rag_workflow():
+                callback = ImprovedCustomStreamlitCallbackHandler(output_log.container())
+                # callback = StreamlitCallbackHandler(output_log.container())
+                # callback = CustomStreamlitCallbackHandler()
+                rag_config = RAGConfig(
+                    model_name=model_select,
+                    model_temperature=model_temperature,
+                    vector_database=st.session_state.vector_database,
+                    callback_function=callback
+                )
+                rag_system = WorkFlowModularRAG(user_query, choose_collection, rag_config)
+                initState = OverallState(user_query=user_query, collection=choose_collection)
+                for result in rag_system.graph.stream(initState):
+                    if result:
+                        st.write(result)   
+                                             
+            st.write("Running RAG Workflow...")
+            run_rag_workflow()
 
-
+    
     
     
 with build_tab:
     st.header("Build Your Own RAG Database")
+    input_method = st.selectbox("Select Import Method", ["Upload File", "User Directorie", "Use Hugging Face Datasets", ], index=1)
+    if input_method == "Upload File":
+        uploaded_file = st.file_uploader("Choose a file")
+        if uploaded_file:
+            st.write(uploaded_file)
+            st.write(uploaded_file.getvalue().decode("utf-8"))
     
+        
 
 with evaluation_tab:
     st.header("Datasets We Use for Evaluation")
     st.markdown("We import the datasets from the Hugging Face datasets library.")
     st.markdown("We will be using the SQuAD and HotpotQA datasets for this demo.")
-    data_set_loader = DatasetLoader()
 
-    # df_squad = data_set_loader.load_dataset("squad")
-    # df_hotpotqa = data_set_loader.load_dataset("hotpot_qa")
+    if 'df_squad' not in st.session_state:
+        st.session_state.df_squad = st.session_state.dataset_loader.load_dataset("squad")
+    if 'df_hotpotqa' not in st.session_state:
+        st.session_state.df_hotpotqa = st.session_state.dataset_loader.load_dataset("hotpot_qa")
+    
+    st.subheader("SQuAD Dataset")
+    st.dataframe(st.session_state.df_squad[:5])
 
-    # st.subheader("SQuAD Dataset")
-    # st.dataframe(df_squad[:5])
-
-    # st.subheader("HotpotQA Dataset")
-    # st.dataframe(df_hotpotqa[:5])
+    st.subheader("HotpotQA Dataset")
+    st.dataframe(st.session_state.df_hotpotqa[:5])
 
     # doc_squad_processed, df_squad = data_set_loader.process_dataset(df_squad, "squad")
     # doc_hotpotqa_processed, df_hotpotqa = data_set_loader.process_dataset(df_hotpotqa, "hotpot_qa")

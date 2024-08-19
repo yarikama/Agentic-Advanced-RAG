@@ -151,13 +151,10 @@ c. If any concerns about relevance arise, don't remove the entire entry.
 RefinedRetrievalData:
 - content: List[str]  # Extracted from retrieved_data
 - metadata: List[Dict[str, Any]]  # Extracted from retrieved_data
-
-
-7. Return the final RefinedRetrievalData object with unique, relevant content and corresponding metadata.
 """)
 
 RETRIEVAL_EXPECTED_OUTPUT = dedent("""
-A RefinedRetrievalData object containing consolidated metadata and content lists.
+A RefinedRetrievalData pydantic object containing consolidated metadata and content lists.
 """)
 
 RERANK_PROMPT = dedent("""

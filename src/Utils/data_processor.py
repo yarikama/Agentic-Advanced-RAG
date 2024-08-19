@@ -34,14 +34,33 @@ from langchain_community.document_loaders import (
 
 load_dotenv()
 
+# def chunked_iterable(iterable, size):
+#     it = iter(iterable)
+#     while True:
+#         chunk = tuple(itertools.islice(it, size))
+#         if not chunk:
+#             break
+#         yield chunk
+        
+
 def chunked_iterable(iterable, size):
     it = iter(iterable)
+    previous_last_item = None
     while True:
-        chunk = tuple(itertools.islice(it, size))
+        chunk = []
+        for _ in range(size):
+            try:
+                item = next(it)
+                if item != previous_last_item:
+                    chunk.append(item)
+                    previous_last_item = item
+            except StopIteration:
+                break
+        
         if not chunk:
             break
-        yield chunk
         
+        yield tuple(chunk)
 
 class DataProcessor:
     def __init__(self, vectordatabase: Optional[VectorDatabase] = None, embedder: Optional[Embedder] = None):
@@ -269,13 +288,13 @@ class DataProcessor:
                         ):
         
         print("Now splitting document...")
-        chunks, all_contents = self.split_document(document)
+        chunks, all_contents_for_corpus = self.split_document(document)
         print("Document split successfully.\n")
         
         # print("all_contents", all_contents)
-        all_contents_add_fake = all_contents.copy()
+        all_contents_add_fake = all_contents_for_corpus.copy()
         additional_docs = [self.generate_semi_random_text() for _ in range(1000)]
-        all_contents_add_fake = all_contents + additional_docs
+        all_contents_add_fake = all_contents_for_corpus + additional_docs
         
         if use_new_corpus:
             print("Now fitting sparse embedder with new documents...")
