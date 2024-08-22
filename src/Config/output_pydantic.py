@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-__all__ = ["UserQueryClassification", "Queries", "QueriesIdentification", "QueriesIdentificationList", "RefinedRetrievalData", "RankedRetrievalData", "AuditMetric", "AuditResult", "UpdateCondition"]
+__all__ = ["UserQueryClassification", "Queries", "QueriesIdentification", "RefinedRetrievalData", "RankedRetrievalData", "AuditMetric", "AuditResult", "UpdateCondition"]
 
 # Pydantic Models For Task Outputs
 # For Classifier
@@ -15,16 +15,11 @@ class Queries(BaseModel):
     transformed_query: Optional[str] = None
     decomposed_queries: Optional[List[str]] = None
     
-# For Retriever (Classification)
+# For Classifier (Classification)
 class QueriesIdentification(BaseModel):
-    query: str
-    needs_retrieval: bool
-    collection_name: Optional[str] = None
-        
-# For Retriever (Classification)
-class QueriesIdentificationList(BaseModel):
-    query_classifications: List[QueriesIdentification]
-    
+    queries: List[str]
+    collection_name: List[Optional[str]]
+            
 # For Retriever (Retrieval)
 class RefinedRetrievalData(BaseModel):
     content: List[str]
@@ -32,7 +27,7 @@ class RefinedRetrievalData(BaseModel):
     
 # For Reranker
 class RankedRetrievalData(BaseModel):
-    ranked_data: List[str]
+    ranked_content: List[str]
     ranked_metadata: List[Dict[str, Any]]
     relevance_scores: List[float]
     

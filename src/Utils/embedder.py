@@ -13,12 +13,23 @@ from pymilvus.model.sparse.bm25.tokenizers import build_default_analyzer # type:
 load_dotenv()
         
 class Embedder:
+    _dense_embedder_instance = None
+
+    @classmethod
+    def get_dense_embedder(cls, model_name, device):
+        if cls._dense_embedder_instance is None:
+            cls._dense_embedder_instance = model.dense.SentenceTransformerEmbeddingFunction(
+                model_name=model_name,
+                device=device
+            )
+        return cls._dense_embedder_instance
+    
     def __init__(self, dense_model_name: str = const.EMBEDDING_MODEL_NAME, device: str = const.EMBEDDING_DEVICE, language: str = const.EMBEDDING_LANGUAGE):
         self.dense_model_name = dense_model_name
         self.device = device
         self.language = language
         self.analyzer = build_default_analyzer(language=self.language)
-        self.dense_embedder = self.initialize_dense_embedder()
+        self.dense_embedder = self.get_dense_embedder(self.dense_model_name, self.device)
         self.sparse_embedder = self.initialize_sparse_embedder()
         self._dense_dim = self.dense_embedder.dim
         print("Embedder initialized")

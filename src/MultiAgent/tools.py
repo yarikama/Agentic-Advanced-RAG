@@ -224,14 +224,14 @@ class Tools:
 
         Returns:
             Tuple[List[str], List[Dict[str, Any]], List[float]]: A tuple containing:
-                - ranked_data (List[str]): The content strings reordered based on relevance scores.
+                - ranked_content (List[str]): The content strings reordered based on relevance scores.
                 - ranked_metadata (List[Dict[str, Any]]): The metadata dictionaries reordered based on relevance scores.
                 - ranked_scores (List[float]): The relevance scores reordered in descending order.
         """
-        ranked_scores = sorted(enumerate(relevance_scores), key=lambda x: x[1], reverse=True)
-        ranked_data = [content[i] for i, _ in ranked_scores]
+        ranked_scores = sorted([(i, score) for i, score in enumerate(relevance_scores) if score > 0], key=lambda x: x[1], reverse=True)
+        ranked_content = [content[i] for i, _ in ranked_scores]
         ranked_metadata = [metadata[i] for i, _ in ranked_scores]
-        return ranked_data, ranked_metadata, [score for _, score in ranked_scores]
+        return ranked_content, ranked_metadata, [score for _, score in ranked_scores]
 
     def _insert_qa_into_db(self, collection_name: str, question: str, answer: str) -> str:
         """

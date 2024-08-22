@@ -25,7 +25,7 @@ llama-index = "^0.10.56"
 langchain-experimental = "^0.0.62"
 datasets = "^2.20.0"
 crewai = {extras = ["tools"], version = "^0.41.1"}
-streamlit = "1.30.0"
+streamlit = "^1.37.1"
 pydantic = "^2.8.2"
 jq = "^1.7.0"
 ragas = "^0.1.12"

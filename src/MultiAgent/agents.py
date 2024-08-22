@@ -36,7 +36,21 @@ class Agents:
         self.create_summarizer = self._summarizer()
         self.create_response_auditor = self._response_auditor()
         self.create_database_updater = self._database_updater()
-    
+        
+        self.agent_map = {
+            "Classifier": self.create_classifier,
+            "Plan Coordinator": self.create_plan_coordinator,
+            "Query Processor": self.create_query_processor,
+            "Retriever": self.create_retriever,
+            "Reranker": self.create_reranker,
+            "Generator": self.create_generator,
+            "Summarizer": self.create_summarizer,
+            "Response Auditor": self.create_response_auditor,
+            "Database Updater": self.create_database_updater,
+        }
+        
+    def get_agents(self, *args):
+        return [self.agent_map[agent_name] for agent_name in args]
     
     # Getters for all agents in nodes
     def get_user_query_classification_node_agent(self):

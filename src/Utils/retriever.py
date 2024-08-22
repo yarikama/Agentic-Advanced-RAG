@@ -27,16 +27,32 @@ class Retriever:
         return response.choices[0].message.content
     
     def dense_search_request(self, dense_query_vectors: Union[List[float], List[List[float]]], field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
-        
-        dense_search_param = {
-            "data": dense_query_vectors,
-            "anns_field": field_name,
-            "param": {
-                "metric_type": "COSINE",
-                "params": {"ef": 100}
-            },
-            "limit": top_k
-        }
+        if const.IS_GPU_INDEX:
+            dense_search_param = {
+                "data": dense_query_vectors,
+                "anns_field": field_name,
+                "param": {
+                    "metric_type": "L2",
+                    "params": {
+                        "itopk_size": 128,
+                        "search_width": 4,
+                        "min_iterations": 0,
+                        "max_iterations": 0,
+                        "team_size": 0
+                    },
+                },
+                "limit": top_k
+            }
+        else:
+            dense_search_param = {
+                "data": dense_query_vectors,
+                "anns_field": field_name,
+                "param": {
+                    "metric_type": "COSINE",
+                    "params": {"ef": 100}
+                },
+                "limit": top_k
+            }
 
         dense_search_request = AnnSearchRequest(**dense_search_param)
         return dense_search_request 

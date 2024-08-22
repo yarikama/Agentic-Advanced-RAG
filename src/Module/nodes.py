@@ -12,14 +12,18 @@ class NodesModularRAG():
                 ):
         
         self.rag_system = LLMMA_RAG_System(rag_config)
-        self.rag_system.tasks.update_task(user_query, specific_collection)
+        self.rag_system.tasks.update_tasks(user_query, specific_collection)
+    
     
     # Action Nodes
     def user_query_classification_node(self, state: OverallState):
         return self.rag_system.user_query_classification_run()
     
-    def retrieval_and_generation_node(self, state: OverallState):
-        return self.rag_system.retrieval_and_generation_run()
+    def retrieval_node(self, state: OverallState):
+        pass
+    
+    def rerank_node(self, state: OverallState):
+        pass
          
     def generation_node(self, state: OverallState):
         return self.rag_system.generation_run()
@@ -48,7 +52,7 @@ class NodesModularRAG():
             return "restart_needed"
         else:
             return "restart_not_needed"
-        
+                
         
 class NodesMultiAgentRAG():
     def __init__(self, 
@@ -58,7 +62,7 @@ class NodesMultiAgentRAG():
                 ):
         
         self.rag_system = LLMMA_RAG_System(rag_config)
-        self.rag_system.tasks.update_task(user_query, specific_collection)
+        self.rag_system.tasks.update_tasks(user_query, specific_collection)
     
     def overall_node(self, state: OverallState):
         return self.rag_system.overall_run()

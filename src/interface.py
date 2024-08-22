@@ -15,17 +15,17 @@ from pydantic import BaseModel
 from typing import TypedDict
 
 
-# if 'vector_database' not in st.session_state:
-#     st.session_state.vector_database = VectorDatabase()
-# if 'embedder' not in st.session_state:
-#     st.session_state.embedder = Embedder()
-# if 'data_processor' not in st.session_state:
-#     st.session_state.data_processor = DataProcessor(st.session_state.vector_database, st.session_state.embedder)
-# if 'collections' not in st.session_state:
-#     st.session_state.collections = st.session_state.vector_database.list_collections()
-#     st.session_state.collections.append("None")
-# if 'dataset_loader' not in st.session_state:
-#     st.session_state.dataset_loader = DatasetLoader()
+if 'vector_database' not in st.session_state:
+    st.session_state.vector_database = VectorDatabase()
+if 'embedder' not in st.session_state:
+    st.session_state.embedder = Embedder()
+if 'data_processor' not in st.session_state:
+    st.session_state.data_processor = DataProcessor(st.session_state.vector_database, st.session_state.embedder)
+if 'collections' not in st.session_state:
+    st.session_state.collections = st.session_state.vector_database.list_collections()
+    st.session_state.collections.append("None")
+if 'dataset_loader' not in st.session_state:
+    st.session_state.dataset_loader = DatasetLoader()
 
 modular_rag_tab, build_tab, evaluation_tab = st.tabs(["Modular RAG Chatbot", "Build From Data", "Evaluation"])
 
@@ -37,34 +37,34 @@ model_select = st.sidebar.selectbox("Select Model",
 
 model_temperature = st.sidebar.slider("Model Temperature", 0.0, 1.0, 0.1, 0.1)
 
-# with modular_rag_tab:
-#     st.header("Modular RAG Chatbot")
-#     st.markdown("We will be using the Modular RAG Chatbot for this demo.")
-#     st.markdown(f"You are now using model: `{model_select}` with temperature: `{model_temperature}`, change the model and temperature in the sidebar.")
-#     st.subheader("User Input")
-#     choose_collection = st.selectbox("Select Your Collection", st.session_state.collections, index=0, key="choose_collection")
-#     user_query = st.text_input("User Query", "Who helps alice the most in the book?")
-#     if st.button("RAG Run!"):
-#         output_log = st.empty()
-        # with output_log.container():                             
-            # def run_rag_workflow():
-            #     callback = ImprovedCustomStreamlitCallbackHandler(output_log.container())
-            #     # callback = StreamlitCallbackHandler(output_log.container())
-            #     # callback = CustomStreamlitCallbackHandler()
-            #     rag_config = RAGConfig(
-            #         model_name=model_select,
-            #         model_temperature=model_temperature,
-            #         vector_database=st.session_state.vector_database,
-            #         callback_function=callback
-            #     )
-            #     rag_system = WorkFlowModularRAG(user_query, choose_collection, rag_config)
-            #     initState = OverallState(user_query=user_query, collection=choose_collection)
-            #     for result in rag_system.graph.stream(initState):
-            #         if result:
-            #             st.write(result)   
+with modular_rag_tab:
+    st.header("Modular RAG Chatbot")
+    st.markdown("We will be using the Modular RAG Chatbot for this demo.")
+    st.markdown(f"You are now using model: `{model_select}` with temperature: `{model_temperature}`, change the model and temperature in the sidebar.")
+    st.subheader("User Input")
+    choose_collection = st.selectbox("Select Your Collection", st.session_state.collections, index=0, key="choose_collection")
+    user_query = st.text_input("User Query", "Who helps alice the most in the book?")
+    if st.button("RAG Run!"):
+        output_log = st.empty()
+        with output_log.container():                             
+            def run_rag_workflow():
+                callback = ImprovedCustomStreamlitCallbackHandler(output_log.container())
+                # callback = StreamlitCallbackHandler(output_log.container())
+                # callback = CustomStreamlitCallbackHandler()
+                rag_config = RAGConfig(
+                    model_name=model_select,
+                    model_temperature=model_temperature,
+                    vector_database=st.session_state.vector_database,
+                    callback_function=callback
+                )
+                rag_system = WorkFlowModularRAG(user_query, choose_collection, rag_config)
+                initState = OverallState(user_query=user_query, collection=choose_collection)
+                for result in rag_system.graph.stream(initState):
+                    if result:
+                        st.write(result)   
                                              
-            # st.write("Running RAG Workflow...")
-            # run_rag_workflow()
+            st.write("Running RAG Workflow...")
+            run_rag_workflow()
     
 # with build_tab:
 #     st.header("Build Your Own RAG Database")

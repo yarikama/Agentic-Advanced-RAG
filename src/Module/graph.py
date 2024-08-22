@@ -17,25 +17,26 @@ class WorkFlowModularRAG():
         # Add nodes to the workflow
         nodes = NodesModularRAG(query, collection, rag_config)
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
-        workflow.add_node("retrieval_and_generation_node", nodes.retrieval_and_generation_node)
+        workflow.add_node("retrieval_node", nodes.retrieval_node)
+        workflow.add_node("rerank_node", nodes.rerank_node)
         workflow.add_node("generation_node", nodes.generation_node)
         workflow.add_node("repeat_count_node", nodes.repeat_count_node)
         workflow.add_node("database_update_node", nodes.database_update_node)
 
-        # Set starting node and finish node
+        # Set starting node
         workflow.set_entry_point("user_query_classification_node")
-        workflow.set_finish_point("database_update_node")
         
         # Add edges to the workflow
         workflow.add_conditional_edges(
             "user_query_classification_node",
             nodes.is_retrieval_needed,
             {
-                "retrieval_needed": "retrieval_and_generation_node",
+                "retrieval_needed": "retrieval_node",
                 "retrieval_not_needed": "generation_node",
             }
         )
-        workflow.add_edge("retrieval_and_generation_node", "repeat_count_node")
+        workflow.add_edge("retrieval_node", "rerank_node")
+        workflow.add_edge("rerank_node", "generation_node")
         workflow.add_edge("generation_node", "repeat_count_node")
         workflow.add_conditional_edges(
             "repeat_count_node",
@@ -45,7 +46,9 @@ class WorkFlowModularRAG():
                 "restart_not_needed": "database_update_node",
             }
         )
-        
+
+        # Set finish node
+        workflow.set_finish_point("database_update_node")
         # Compile
         self.graph = workflow.compile()
         

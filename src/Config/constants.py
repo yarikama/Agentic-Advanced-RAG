@@ -24,6 +24,7 @@ CHUNK_OVERLAP = 20
 # For Create Collection When Processing Data Settings:
 IS_CREATE_COLLECTION = False
 IS_USING_NEW_CORPUS = True
+IS_GPU_INDEX = False
 
 # For Huggingface Datasets Settings:
 HF_NAME = None
@@ -37,3 +38,5 @@ BATCH_SIZE = 10000
 # For HyDE Settings:
 MODEL_NAME = "gpt-4o-mini"
 MODEL_TEMPERATURE = 0.1
+
+# For Milvus Settings:

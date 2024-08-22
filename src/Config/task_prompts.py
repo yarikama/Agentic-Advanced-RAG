@@ -1,6 +1,8 @@
 # prompts.py
 from textwrap import dedent
 
+
+# User Query Classification Task
 USER_QUERY_CLASSIFICATION_PROMPT = dedent("""
 Analyze the following user query and determine if it requires information retrieval to be answered accurately:
 
@@ -34,6 +36,7 @@ UserQueryClassification:
     justification: str
 """)
 
+# Plan Coordinator Task
 PLAN_COORDINATOR_PROMPT = dedent("""
 As the Plan Coordinator, create a high-level plan for your teammates to answer this user query: {user_query}
 
@@ -49,6 +52,8 @@ PLAN_COORDINATOR_EXPECTED_OUTPUT = dedent("""
 "A plan outlining the major stages for your teammates to answer the user query."
 """)
 
+
+# Query Processor Task
 QUERY_PROCESSOR_PROMPT = dedent("""
 User query: {user_query}
 
@@ -73,6 +78,7 @@ Ensure that:
 - All fields should be properly filled according to your analysis.
 """)                            
 
+# First Query Processor Task
 CLASSIFICATION_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
 Using the query decomposition and transformation results from the context, perform classification and identify relevant collections:
 
@@ -86,16 +92,16 @@ Queries(
 
 1. Use the list_all_collections_tool to get a list of all available collections.
 
-2. For each Queries object in the context:
-a. Analyze the query (either transformed_query or each query in decomposed_queries if present).
-b. Determine the most relevant collection name for the query based on the list from step 1.
-    If no collection is relevant, use None.
-c. Keep the needs_retrieval flag from the Queries object.
+2. For every query(in original query, transformed query, decomposed_queries) in Queries:
+a. Classify the query as needing retrieval or not (by judging whether the query requires external data or time-sensitive information).
+- If retrieval is needed, store the query.
+    - Determine the most relevant collection name for the query from the list of collections.
+    - If no collection is relevant, use None.
+- If retrieval is not needed, skip the query.
+    - Elaborate on the reason for skipping in the justification.
 
-3. Compile a list of QueryClassification objects only for queries that need retrieval (needs_retrieval is True).
-Each QueryClassification object should contain the query and its corresponding collection name.
-
-4. Output the final list of QueryClassification objects.
+3. Compile a QueriesIdentification only for queries that need retrieval.
+A QueriesIdentification object should contain the queries and their corresponding collection names.
 """)
 
 CLASSIFICATION_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
@@ -108,79 +114,74 @@ Queries(
     transformed_query: Optional[str],
     decomposed_queries: Optional[List[str]]
 )
-1. For each query in the context:
-    a. Analyze the query (either transformed_query or each query in decomposed_queries if present).
-    b. Set the collection name to the specific collection provided.
-    c. Keep the needs_retrieval flag from the Queries object.
-2. Compile a list of QueryClassification objects only for queries that need retrieval (needs_retrieval is True).
+
+2. For every query(in original query, transformed query, decomposed_queries) in Queries:
+a. Classify the query as needing retrieval or not (by judging whether the query requires external data or time-sensitive information).
+- If retrieval is needed, store the query.
+    - Use the specific collection name provided in the task.
+- If retrieval is not needed, skip the query.
+    - Elaborate on the reason for skipping in the justification.
+
+3. Compile a QueriesIdentification only for queries that need retrieval.
+A QueriesIdentification object should contain the queries and their corresponding collection names.
 """)
 
 CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
-Your output should be a list of Pydantic Objects with the following structure:
-class QueryClassification(BaseModel):
-    query: str
-    needs_retrieval: bool
-    collection_name: Optional[str] = None
-If retrieval is not needed for a query, set its "collection_name" to None.
+Your output should be a pydantc object with the following structure:
+class QueriesIdentification(BaseModel):
+    queries: List[str]
+    collection_name: List[Optional[str]]
 """)
 
-RETRIEVAL_PROMPT = dedent("""
-Using the list of QueryClassification objects from the context, perform the retrieval process:
+# RETRIEVAL_PROMPT = dedent("""
+# Using a QueriesIdentification object from the context, perform the retrieval process:
+# QueriesIdentification object:
+# - queries: List[str]
+# - collection_name: List[Optional[str]]
 
-1. Process the QueryClassification objects:
-a. Extract the collection names and queries from each QueryClassification object.
-b. Create two separate lists: one for collection names and one for queries.
-c. Only include items where needs_retrieval is True and collection_name is not None.
-d. Ensure the lists are in the same order.
+# 1. Extract the list of collection names and list of queries from the QueriesIdentification object.
 
-2. Use the retrieve_data_tool with these two lists:
-- The first argument should be the list of collection names.
-- The second argument should be the list of queries.
-- Use the top_k value: 5 for retrieving data.
+# 2. Use the _retrieve tools with these two lists:
+# - The first argument should be the list of collection names from QueriesIdentification.
+# - The second argument should be the list of queries from QueriesIdentification.
+# - Decide the top_k value based on the expected number of relevant results. (e.g., top_k=5)
 
-3. The retrieve_data_tool will return a dictionary of 2 lists:
-- content: List[str]  # Retrieved content for each query
-- metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
+# 3. The _retrieve tool will return a dictionary of 2 lists:
+# - content: List[str]  # Retrieved content for each query
+# - metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
+# There is no duplicate content entries in the retrieved data.
 
-4. Remove irrelevant data:
-a. For each content entry, evaluate its relevance to the original user query: {user_query}.
-b. Remove content entries that are deemed irrelevant, along with their corresponding metadata.
-c. If any concerns about relevance arise, don't remove the entire entry.
+# 4. Compile these results into a pydantic object:
+# RefinedRetrievalData:
+# - content: List[str]  # Extracted from retrieved_data
+# - metadata: List[Dict[str, Any]]  # Extracted from retrieved_data
+# """)
 
-5. Compile these results into a pydantic object:
-RefinedRetrievalData:
-- content: List[str]  # Extracted from retrieved_data
-- metadata: List[Dict[str, Any]]  # Extracted from retrieved_data
-""")
+# 4. Remove irrelevant data:
+# a. For each content entry, evaluate its relevance to the original user query: {user_query}.
+# b. Remove content entries that are deemed irrelevant, along with their corresponding metadata.
+# c. If any concerns about relevance arise, don't remove the entire entry.
 
-RETRIEVAL_EXPECTED_OUTPUT = dedent("""
-A RefinedRetrievalData pydantic object containing consolidated metadata and content lists.
-""")
+# RETRIEVAL_EXPECTED_OUTPUT = dedent("""
+# A RefinedRetrievalData pydantic object containing consolidated metadata and content lists.
+# """)
 
 RERANK_PROMPT = dedent("""
 Perform a reranking process on the retrieved content based on its relevance to the user query.
 
 User Query: "{user_query}"
 
-Follow these steps:
-1. The input RefinedRetrievalData contains:
-    - metadata: List[Dict[str, Any]]
-    - content: List[str]
-2. Your tasks are:
-    a) Evaluate the relevance of each piece of content to the user query.
-    b) Assign a relevance score (float between 0 and 1) to each piece of content.
-    c) Compile these scores into a list of floats (relevance_scores).
-    d) Use the rerank tool with the original metadata, content, and your relevance_scores.
-3. The rerank tool will return ranked data, metadata, and relevance scores which are same as RankedRetrievalData.
-4. Just put the result return by your tool into a pydantic object.
-    RankedRetrievalData:
-        ranked_data: List[str]
-        ranked_metadata: List[Dict[str, Any]]
-        relevance_scores: List[float]
+Retrieved Data: "{retrieved_data}"
+
+You have to score each content based on its relevance to the user query.
+A relevance score should be a float value between 0 and 1, where 1 indicates high relevance and 0 indicates low relevance.
+Retrun the list of scores for each content based on their relevance to the user query.
 """)
 
 RERANK_EXPECTED_OUTPUT = dedent("""
 Your output should be a RankedRetrievalData object.
+RankedRetrievalData:
+    relevance_scores: List[float]
 """)
 
 GENERATION_PROMPT = dedent("""
@@ -340,7 +341,9 @@ Steps:
          question = user_query
          answer = summarizer's complete response without any modification
       ii. Use _insert_qa_into_db(specific_collection, question, answer) to store the information.
-   c. If a similar query exists with a very similar answer, skip the insertion to avoid duplication.
+   c. If a similar data is retrieved, skip the insertion process (don't use the insert_qa_too) and end the task.
+   
+3. If the Response Auditor does not approve or the Classification result indicates no retrieval is needed, skip the insertion process.
 
 3. Output whether the insertion operation was successful or skipped and explain the reason in pydanctic object.
 """)

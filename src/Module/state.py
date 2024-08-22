@@ -10,7 +10,7 @@ class OverallState(TypedDict):
     # pydantic models
     user_query_classification: Optional[UserQueryClassification] = None
     queries: Optional[Queries] = None
-    queries_identification_list: Optional[QueriesIdentificationList] = None
+    queries_identification: Optional[QueriesIdentification] = None
     refined_retrieval_data: Optional[RefinedRetrievalData] = None
     ranked_retrieval_data: Optional[RankedRetrievalData] = None
     audit_result: Optional[AuditResult] = None

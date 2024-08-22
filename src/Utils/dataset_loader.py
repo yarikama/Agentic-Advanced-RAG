@@ -31,6 +31,8 @@ class DatasetLoader:
             dataset = load_dataset(dataset_name, 'unfiltered', split=split)
         elif dataset_name == 'hotpot_qa':
             dataset = load_dataset(dataset_name, 'distractor', split=split)
+        elif dataset_name == 'deepmind/narrativeqa':
+            dataset = load_dataset(dataset_name, split=split)
         else:
             raise ValueError(f"Unsupported dataset: {dataset_name}")
         
