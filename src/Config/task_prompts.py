@@ -31,8 +31,8 @@ Justify your decision briefly.
 
 USER_QUERY_CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
 A pydantic object with the following structure:
-UserQueryClassification:
-    needs_retrieval: bool,
+class UserQueryClassificationResult(BaseModel):
+    needs_retrieval: bool
     justification: str
 """)
 
@@ -49,7 +49,7 @@ Your task:
 """)
 
 PLAN_COORDINATION_EXPECTED_OUTPUT = dedent("""
-"A plan outlining the major stages for your teammates to answer the user query."
+A plan outlining the major stages for your teammates to answer the user query.
 """)
 
 
@@ -64,33 +64,57 @@ c. Decompose the transformed query into simpler sub-queries if necessary.
 """)
 
 QUERY_PROCESS_EXPECTED_OUTPUT = dedent("""
-Your output should be a Pydantic object of type Queries with the following structure:
-Queries(
-    original_query: str,
-    transformed_queries: Optional[List[str]],
+Your output should be a Pydantic object of type QueriesProcessResult with the following structure:
+class QueriesProcessResult(BaseModel):
+    original_query: str
+    transformed_queries: Optional[List[str]]
     decomposed_queries: Optional[List[str]]
-)
 
 Ensure that:
 - If needs_retrieval is True, provide transformed_query and optionally decomposed_queries.
 - decomposed_queries and transformed_queries, if provided, should be a list of strings, each representing a sub-query.
 """)                            
 
+TOPIC_SEARCHING_PROMPT = dedent("""
+1. Analyze the user's question and the provided data tables.
+2. Generate key points that address the user's question based on the data.
+3. For each key point:
+   - Write a comprehensive description.
+   - Assign an importance score (0-100).
+   - Create 2-3 example sentences that might appear in documents related to this key point.
+4. Format the response as a TopicSearchingResult object containing a list of TopicSearchingEntity objects.
+5. Ensure all information is supported by the provided data.
+6. If the answer is unknown or data is insufficient, create a single TopicSearchingEntity with a score of 0 and appropriate description and example sentences.
+
+""")
+
+TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
+The response should be formatted as a Pydantic object with the following structure:
+
+class TopicSearchingEntity(BaseModel):
+    description: str
+    score: int
+    example_sentence: List[str]
+
+class TopicSearchingResult(BaseModel):
+    topics: List[TopicSearchingEntity]
+""")
+
+
 # First Query Processor Task
 SUB_QUERIES_CLASSIFICATION_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
 Using the query decomposition and transformation results from the context, perform classification and identify relevant collections:
 
-Expected context: You will receive a Queries object with the following structure:
+Expected context: You will receive a QueriesProcessResult object with the following structure:
 
-Queries(
-    original_query: str,
-    transformed_query: Optional[str],
+class QueriesProcessResult(BaseModel):
+    original_query: str
+    transformed_queries: Optional[List[str]]
     decomposed_queries: Optional[List[str]]
-)
 
 Use the list_all_collections_tool to get a list of all available collections.
 
-For every query(in original query, transformed query, decomposed_queries) in Queries:
+For every query(in original query, transformed query, decomposed_queries) in QueriesProcessResult:
 a. Classify the query as needing retrieval or not (by judging whether the query requires external data or time-sensitive information).
 - If retrieval is needed, store the query with the collection name.
     - Determine the most relevant collection name for the query from the list of collections.
@@ -98,8 +122,7 @@ a. Classify the query as needing retrieval or not (by judging whether the query 
 - If retrieval is not needed, skip the query.
     - Elaborate on the reason for skipping in the justification.
 
-Compile a QueriesIdentification only for queries that need retrieval.
-A QueriesIdentification object should contain the queries and their corresponding collection names.
+Compile a SubQueriesClassificationResult only for queries that need retrieval.
 """)
 
 SUB_QUERIES_CLASSIFICATION_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
@@ -107,11 +130,10 @@ Using the query decomposition and transformation results from the context, perfo
 
 Expected context: You will receive a Queries object with the following structure:
 
-Queries(
-    original_query: str,
-    transformed_query: Optional[str],
+class QueriesProcessResult(BaseModel):
+    original_query: str
+    transformed_queries: Optional[List[str]]
     decomposed_queries: Optional[List[str]]
-)
 
 Specific Collection: {specific_collection}
 
@@ -123,28 +145,28 @@ a. Classify the query as needing retrieval or not (by judging whether the query 
     - Elaborate on the reason for skipping in the justification.
 
 Compile a QueriesIdentification only for queries that need retrieval.
-A QueriesIdentification object should contain the queries and their corresponding collection names.
 """)                                                            
 
 
 SUB_QUERIES_CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
 Your output should be a pydantc object with the following structure:
-class QueriesIdentification(BaseModel):
+class SubQueriesClassificationResult(BaseModel):
     queries: List[str]
     collection_name: List[Optional[str]]
 """)
 
 RETRIEVAL_PROMPT = dedent("""
-Using a QueriesIdentification object from the context, perform the retrieval process:
-QueriesIdentification object:
-- queries: List[str]
-- collection_name: List[Optional[str]]
+Using a SubQueriesClassificationResult object from the context, perform the retrieval process:
 
-1. Extract the list of collection names and list of queries from the QueriesIdentification object.
+class SubQueriesClassificationResult(BaseModel):
+    queries: List[str]
+    collection_name: List[Optional[str]]
+
+1. Extract the list of collection names and list of queries from the SubQueriesClassificationResult object.
 
 2. Use the _retrieve tools with these two lists:
-- The first argument should be the list of collection names from QueriesIdentification.
-- The second argument should be the list of queries from QueriesIdentification.
+- The first argument should be the list of collection names from SubQueriesClassificationResult.
+- The second argument should be the list of queries from SubQueriesClassificationResult.
 - Decide the top_k value based on the expected number of relevant results. (e.g., top_k=5)
 
 3. The _retrieve tool will return a dictionary of 2 lists:
@@ -159,39 +181,29 @@ There is no duplicate content entries in the retrieved data.
 # c. If any concerns about relevance arise, don't remove the entire entry.
 
 RETRIEVAL_EXPECTED_OUTPUT = dedent("""
-A RefinedRetrievalData pydantic object containing consolidated metadata and content lists.
+A RetrievalResult pydantic object containing consolidated metadata and content lists.
 """)
 
-RETRIEVAL_GRAPH_TOPIC_PROMPT = dedent("""
-User Query: "{user_query}"
+RETRIEVAL_ = dedent("""
+Using a SubQueriesClassificationResult object from the context, perform the retrieval process:
 
-Task:
-1. Use the QueriesIdentification object from the context:
-   - Extract the list of queries from QueriesIdentification.queries
-   - Ignore the collection_name field
+class SubQueriesClassificationResult(BaseModel):
+    queries: List[str]
+    collection_name: List[Optional[str]]
 
-2. Retrieve relevant topics:
-   - Use the _retrieve_graph_topic tool with the extracted list of queries
-   - Find the top_k most relevant topics related to these queries
+1. Extract the list of collection names and list of queries from the SubQueriesClassificationResult object.
 
-3. Generate hypothetical answers:
-   - Based on the retrieved topics and the original user query, generate a list of possible answers or responses
-   - These answers should be hypothetical and aimed at addressing the user's query in light of the retrieved topics
+2. Use the _retrieve tools with these two lists:
+- The first argument should be the list of collection names from SubQueriesClassificationResult.
+- The second argument should be the list of queries from SubQueriesClassificationResult.
+- Decide the top_k value based on the expected number of relevant results. (e.g., top_k=5)
 
-4. Store results using _retrieval_details tool:
-   - Use the _retrieval_details tool to store the generated information
-   - Pass the following to the _retrieval_details tool:
-     a. The list of retrieved relevant topics from step 2
-     b. The list of generated hypothetical answers from step 3
-
-Ensure that:
-1. The _retrieve_graph_topic tool is used correctly to obtain the initial topics
-2. The hypothetical answers are generated based on both the retrieved topics and the user query
-3. The _retrieval_details tool is used to store both the topics and the generated answers
-4. The process follows the exact order: retrieve topics, generate answers, store both in _retrieval_details
-
-Note: The final step of using the _retrieval_details tool is crucial for storing the information for subsequent retrieval steps. There's no need to create a separate RetrievalGlobalTopics object in this process.
+3. The _retrieve tool will return a dictionary of 2 lists:
+- content: List[str]  # Retrieved content for each query
+- metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
+There is no duplicate content entries in the retrieved data.
 """)
+
 
 
 RERANK_PROMPT = dedent("""
@@ -199,16 +211,16 @@ Perform a reranking process on the retrieved content based on its relevance to t
 
 User Query: "{user_query}"
 
-Retrieved Data: "{retrieved_data}"
-
 You have to score each content based on its relevance to the user query.
 A relevance score should be a float value between 0 and 1, where 1 indicates high relevance and 0 indicates low relevance.
 Retrun the list of scores for each content based on their relevance to the user query.
 """)
 
 RERANK_EXPECTED_OUTPUT = dedent("""
-Your output should be a RankedRetrievalData object.
-RankedRetrievalData:
+Your output should be a RerankingResult object.
+class RerankingResult(BaseModel):
+    ranked_content: List[str]
+    ranked_metadata: List[Dict[str, Any]]
     relevance_scores: List[float]
 """)
 
@@ -233,57 +245,6 @@ Your output should be a comprehensive analysis that ties together all the inform
 
 GENERATION_EXPECTED_OUTPUT = dedent("""
 "A comprehensive analysis answering the user's original query based on all the provided data from sub-queries."
-""")
-
-SUMMARIZER_PROMPT = dedent("""
-Summarize the comprehensive analysis provided by the Generator into a concise, accurate, and highly relevant response to the user's original query. Your summary will be evaluated based on context relevance, answer relevance, faithfulness, and conciseness.
-
-Original user query: {user_query}
-
-Your task:
-1. Carefully review the original user query and the Generator's comprehensive analysis.
-2. Create a summary that excels in the following areas:
-
-a. Context Relevance:
-    - Ensure every piece of information in your summary is directly related to the query.
-    - Avoid including any irrelevant or tangential information.
-
-b. Answer Relevance:
-    - Provide a clear, direct answer to the main question(s) in the original query.
-    - Ensure your answer is complete and addresses all aspects of the query.
-
-c. Faithfulness (Truthfulness):
-    - Stick strictly to the facts and insights provided in the Generator's analysis.
-    - Do not introduce any new information or make assumptions beyond what's in the source material.
-    - If there are uncertainties or limitations in the data, clearly state them.
-
-d. Conciseness:
-    - Make your summary as brief as possible while still fully answering the query.
-    - Use clear, straightforward language.
-    - Avoid repetition and unnecessary elaboration.
-
-3. Structure your summary as follows:
-- Start with a direct answer to the main query.
-- Follow with key supporting facts and insights, prioritized by relevance.
-- Include a brief statement on data limitations or confidence level, if relevant.
-- End with a concise conclusion that ties back to the original query.
-
-4. Double-check your summary to ensure:
-- It doesn't contain any information not present in the Generator's analysis.
-- Every sentence directly contributes to answering the user's query.
-- The language is clear and accessible, avoiding unnecessary jargon.
-
-Your output should be a highly relevant, faithful, and concise summary that directly and fully answers the user's original query, optimized for high performance in RAGAS evaluation.
-""")
-
-SUMMARIZER_EXPECTED_OUTPUT = dedent("""
-A concise, highly relevant summary including:
-1. Direct and complete answer to the main query
-2. Key supporting facts and insights, strictly from the source material
-3. Brief mention of limitations or confidence level (if applicable)
-4. Concise conclusion tying back to the original query
-
-The summary should be optimized for high RAGAS scores in context relevance, answer relevance, faithfulness, and conciseness.
 """)
 
 RESPONSE_AUDITOR_PROMPT = dedent("""
@@ -315,8 +276,8 @@ If restart_required is True, include in additional_comments specific suggestions
 """)
 
 RESPONSE_AUDITOR_EXPECTED_OUTPUT = dedent("""
-Your output should be a Pydantic object of type AuditResult with the following structure:
-AuditResult(
+Your output should be a Pydantic object of type ResponseAuditResult with the following structure:
+ResponseAuditResult(
     metrics: List[AuditMetric],
     overall_score: float,
     restart_required: bool,
@@ -374,12 +335,4 @@ Steps:
 3. If the Response Auditor does not approve or the Classification result indicates no retrieval is needed, skip the insertion process.
 
 3. Output whether the insertion operation was successful or skipped and explain the reason in pydanctic object.
-""")
-
-DATABASE_UPDATER_EXPECTED_OUTPUT = dedent("""
-A Pydantic object of type UpdateCondition with the following structure:
-UpdateCondition(
-    is_database_updated: bool,
-    reason: str
-)
 """)

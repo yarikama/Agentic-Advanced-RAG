@@ -1,41 +1,41 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any
 
-__all__ = ["UserQueryClassification", "Queries", "QueriesIdentification", "RefinedRetrievalData", "RankedRetrievalData", "AuditMetric", "AuditResult", "UpdateCondition"]
+
+
 
 # Pydantic Models For Task Outputs
 # For Classifier
-class UserQueryClassification(BaseModel):
+class UserQueryClassificationResult(BaseModel):
     needs_retrieval: bool
     justification: str
 
 # For Query Processor
-class Queries(BaseModel):
+class QueriesProcessResult(BaseModel):
     original_query: str
     transformed_queries: Optional[List[str]] = None
     decomposed_queries: Optional[List[str]] = None
     
 # For Classifier (Classification)
-class QueriesIdentification(BaseModel):
+class SubQueriesClassificationResult(BaseModel):
     queries: List[str]
     collection_name: List[Optional[str]]
+
+class TopicSearchingEntity(BaseModel):
+    description: str
+    score: int
+    example_sentence: str
+    
+class TopicSearchingResult(BaseModel):
+    topics: List[TopicSearchingEntity]
             
 # For Retriever (Retrieval)
-class RefinedRetrievalData(BaseModel):
-    content: List[str]
-    metadata: List[Dict[str, Any]]
-    
-class RetrievalGlobalTopics(BaseModel):
-    topics: List[str]
-    answers: List[str]
-    
-class RetrievalDetailedData(BaseModel):
-    topics: List[str]
+class RetrievalResult(BaseModel):
     content: List[str]
     metadata: List[Dict[str, Any]]
     
 # For Reranker
-class RankedRetrievalData(BaseModel):
+class RerankingResult(BaseModel):
     ranked_content: List[str]
     ranked_metadata: List[Dict[str, Any]]
     relevance_scores: List[float]
@@ -46,20 +46,8 @@ class AuditMetric(BaseModel):
     score: float = Field(..., ge=0, le=1)
     comment: Optional[str] = None
 
-class AuditResult(BaseModel):
+class ResponseAuditResult(BaseModel):
     metrics: List[AuditMetric]
     overall_score: float = Field(..., ge=0, le=1)
     restart_required: bool
     additional_comments: Optional[str] = None
-    
-class UpdateCondition(BaseModel):
-    is_database_updated: bool
-    reason: str
-    
-
-# class RetrievalData(BaseModel):
-#     query: str
-#     needs_retrieval: bool
-#     collection_name: Optional[str] = None
-#     retrieved_metadata: Optional[Dict[str, Any]] = None
-#     retrieved_content: Optional[str] = None

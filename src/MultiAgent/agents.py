@@ -34,7 +34,6 @@ class Agents:
         self.create_retriever = self._retriever()
         self.create_reranker = self._reranker()
         self.create_generator = self._generator()
-        self.create_summarizer = self._summarizer()
         self.create_response_auditor = self._response_auditor()
         self.create_database_updater = self._database_updater()
         
@@ -46,7 +45,6 @@ class Agents:
             "Retriever": self.create_retriever,
             "Reranker": self.create_reranker,
             "Generator": self.create_generator,
-            "Summarizer": self.create_summarizer,
             "Response Auditor": self.create_response_auditor,
             "Database Updater": self.create_database_updater,
         }
@@ -54,58 +52,58 @@ class Agents:
     def get_agents(self, *args):
         return [self.agent_map[agent_name] for agent_name in args]
     
-    # Getters for all agents in nodes
-    def get_user_query_classification_node_agent(self):
-        return [
-            self.create_classifier,
-        ]
+    # # Getters for all agents in nodes
+    # def get_user_query_classification_node_agent(self):
+    #     return [
+    #         self.create_classifier,
+    #     ]
         
-    def get_retrieval_and_generation_node_agent(self):
-        return [
-            self.create_retriever,
-            self.create_reranker,
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-        ]
+    # def get_retrieval_and_generation_node_agent(self):
+    #     return [
+    #         self.create_retriever,
+    #         self.create_reranker,
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #     ]
         
-    def get_generation_node_agent(self):
-        return [
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-        ]
+    # def get_generation_node_agent(self):
+    #     return [
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #     ]
         
-    def get_database_update_node_agent(self):
-        return [
-            self.create_database_updater,
-        ]
+    # def get_database_update_node_agent(self):
+    #     return [
+    #         self.create_database_updater,
+    #     ]
     
-    # Getters for all agents in overall process
-    def get_sequential_agents(self):
-        return [
-            self.create_classifier,
-            self.create_plan_coordinator, # Only Plan Coordinator is used in Sequential
-            self.create_query_processor,
-            self.create_retriever,
-            self.create_reranker,
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-            self.create_database_updater,
-        ]
+    # # Getters for all agents in overall process
+    # def get_sequential_agents(self):
+    #     return [
+    #         self.create_classifier,
+    #         self.create_plan_coordinator, # Only Plan Coordinator is used in Sequential
+    #         self.create_query_processor,
+    #         self.create_retriever,
+    #         self.create_reranker,
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #         self.create_database_updater,
+    #     ]
         
-    def get_hierarchical_agents(self):
-        return [
-            self.create_classifier,
-            self.create_query_processor,
-            self.create_retriever,
-            self.create_reranker,
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-            self.create_database_updater,
-        ]
+    # def get_hierarchical_agents(self):
+    #     return [
+    #         self.create_classifier,
+    #         self.create_query_processor,
+    #         self.create_retriever,
+    #         self.create_reranker,
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #         self.create_database_updater,
+    #     ]
     
         
     # Agent definitions
@@ -171,11 +169,16 @@ class Agents:
     def _topic_searcher(self):
         return Agent(
             role='Topic Searcher',
-            goal="""Identify the main topics and sub-topics in the user query.
-            You analyze the user's query and synthesize the community information extracted 
-            from the graph database to compile topics related to this query.
-            You can derive these topics by organizing, summarizing, and concluding the information received from the communities. 
-            This will help facilitate detailed information searches in the vector database.
+            goal="""
+            Generate a response consisting of a list of key points that responds to the user's question, summarizing all relevant information in the input data tables.
+
+            You should use the data provided in the data tables below as the primary context for generating the response.
+            If you don't know the answer or if the input data tables do not contain sufficient information to provide an answer, just say so. Do not make anything up.
+
+            Each key point in the response should have the following elements:
+            a) Description: A comprehensive description of the point.
+            b) Importance Score: An integer score between 0-100 that indicates how important the point is in answering the user's question. An 'I don't know' type of response should have a score of 0.
+            c) Example Sentences: A list of imagined sentences that might appear in documents related to this key point, to aid in semantic search.
             """,
             backstory="""
             You are a seasoned librarian with a talent for organizing and categorizing information. 
@@ -243,21 +246,6 @@ class Agents:
             allow_delegation=False,
             callbacks=[self.callback_function],
         )
-        
-    # def _summarizer(self):
-    #     return Agent(
-    #         role='Summarizer',
-    #         goal='Create a concise, high-quality final answer from the Generator\'s output.',
-    #         backstory="""
-    #         You refine the Generator's output into a clear, concise response that 
-    #         directly addresses the user query while maintaining depth and quality.
-    #         """,
-    #         verbose=True,
-    #         llm=self.llm,
-    #         memory=True,
-    #         allow_delegation=False,
-    #         callbacks=[self.callback_function],
-    #     )
         
     def _response_auditor(self):
         return Agent(
