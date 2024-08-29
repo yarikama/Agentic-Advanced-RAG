@@ -24,7 +24,8 @@ CHUNK_OVERLAP = 20
 # For Create Collection When Processing Data Settings:
 IS_CREATE_COLLECTION = False
 IS_USING_NEW_CORPUS = True
-IS_GPU_INDEX = False
+IS_GPU_INDEX = True
+# IS_GPU_INDEX = True
 
 # For Huggingface Datasets Settings:
 HF_NAME = None

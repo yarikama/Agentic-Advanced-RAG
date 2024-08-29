@@ -46,7 +46,35 @@ class Tools:
         self.create_calculator_tool = create_tool(self._calculator)
         self.create_basic_statistics_tool = create_tool(self._basic_statistics)
         self.create_insert_qa_into_db_tool = create_tool(self._insert_qa_into_db)
+        
+        self.tools_map = {
+            "list_all_collections": self.create_list_all_collections_tool,
+            "retrieve_data": self.create_retrieve_data_tool,
+            "dense_retrieve_data": self.create_dense_retrieve_data_tool,
+            "ranker": self.create_ranker_tool,
+            "calculator": self.create_calculator_tool,
+            "basic_statistics": self.create_basic_statistics_tool,
+            "insert_qa_into_db": self.create_insert_qa_into_db_tool,
+        }
         print("Tools initialized")
+        
+    def get_tools(self, **kwargs):
+        """
+        "list_all_collections
+        "retrieve_data
+        "dense_retrieve_data
+        "ranker
+        "calculator
+        "basic_statistics
+        "insert_qa_into_db
+        """
+        tools = []
+        for tool_name, is_result in kwargs.items():
+            if is_result:
+                tools.append(self.tools_map[tool_name](result_as_answer=True))
+            else:
+                tools.append(self.tools_map[tool_name])
+        return tools
     
     # Getters for all tools
     def get_retriever_toolkit(self):

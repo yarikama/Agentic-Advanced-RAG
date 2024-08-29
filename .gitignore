@@ -5,3 +5,4 @@ volumes/
 .data/
 .tmp/
 .env
+graph_rag/

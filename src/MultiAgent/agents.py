@@ -30,6 +30,7 @@ class Agents:
         self.create_plan_coordinator = self._plan_coordinator()
         self.create_query_processor = self._query_processor()
         self.create_classifier = self._classifier()
+        self.create_topic_searcher = self._topic_searcher()
         self.create_retriever = self._retriever()
         self.create_reranker = self._reranker()
         self.create_generator = self._generator()
@@ -41,6 +42,7 @@ class Agents:
             "Classifier": self.create_classifier,
             "Plan Coordinator": self.create_plan_coordinator,
             "Query Processor": self.create_query_processor,
+            "Topic Searcher": self.create_topic_searcher,
             "Retriever": self.create_retriever,
             "Reranker": self.create_reranker,
             "Generator": self.create_generator,
@@ -156,14 +158,29 @@ class Agents:
             callbacks=[self.callback_function],
         )
         
+    def _topic_searcher(self):
+        return Agent(
+            role='Topic Searcher',
+            goal='Identify the main topics and sub-topics in the user query.',
+            backstory="""
+            You analyze the user's query and synthesize the community information extracted from the graph database to compile topics related to this query.
+            You can derive these topics by organizing, summarizing, and concluding the information received from the communities. 
+            This will help facilitate detailed information searches in the vector database.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            allow_delegation=False,
+            callbacks=[self.callback_function],
+        )
+        
     def _retriever(self):
         return Agent(
             role='Retriever',
             goal='Retrieve relevant information from the database for given sub-queries.',
             backstory="""
-            You determine retrieval necessity for sub-queries, search the database, 
-            retrieve relevant information, and compile results for the Generator.
-            Sometimes there may be no relevant information in the database. You can ignore the sub-query.
+            You search the database for topics and details related to the user query, 
+            gather relevant information, and compile results for the Generator.
             """,
             verbose=True,
             llm=self.llm,
@@ -179,7 +196,6 @@ class Agents:
             backstory="""
             As a Reranker, your job is to assess the relevance of retrieved data to the original query.
             You need to carefully compare each piece of data to the query, assign a relevance score,
-            and reorder the data so that the most relevant information appears first.
             Your work is crucial in ensuring that the most pertinent information is prioritized for further analysis.
             """,
             verbose=True,
@@ -233,7 +249,6 @@ class Agents:
             allow_delegation=False,
             callbacks=[self.callback_function],
         )
-
         
     def _database_updater(self):
         return Agent(

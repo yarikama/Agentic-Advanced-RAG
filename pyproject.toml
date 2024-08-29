@@ -34,6 +34,8 @@ langgraph = "^0.2.3"
 mypy = "^1.11.1"
 streamlit-pydantic = "^0.6.0"
 pyarrow = "^17.0.0"
+neo4j = "^5.23.1"
+lshashpy3 = "^0.0.9"
 
 
 [tool.poetry.group.dev.dependencies]

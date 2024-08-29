@@ -2,7 +2,7 @@ from Config.output_pydantic import *
 from typing import Optional, TypedDict, List
 from pydantic import BaseModel, Field
 
-class OverallState(TypedDict):
+class OverallState(BaseModel):
     # Input
     user_query: str
     specific_collection: Optional[str] = None
@@ -20,7 +20,7 @@ class OverallState(TypedDict):
     result: str = None
     repeat_times: int = 0
 
-class SingleState(TypedDict):
+class SingleState(BaseModel):
     user_query: str
     specific_collection: Optional[str] = None
     

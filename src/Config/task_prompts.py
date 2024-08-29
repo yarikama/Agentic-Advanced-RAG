@@ -37,7 +37,7 @@ UserQueryClassification:
 """)
 
 # Plan Coordinator Task
-PLAN_COORDINATOR_PROMPT = dedent("""
+PLAN_COORDINATION_PROMPT = dedent("""
 As the Plan Coordinator, create a high-level plan for your teammates to answer this user query: {user_query}
 
 Your task:
@@ -48,13 +48,13 @@ Your task:
     Your team members: Query Processor, Retriever, Reranker, Generator, Response Auditor, Database Updater, and Summarizer.            
 """)
 
-PLAN_COORDINATOR_EXPECTED_OUTPUT = dedent("""
+PLAN_COORDINATION_EXPECTED_OUTPUT = dedent("""
 "A plan outlining the major stages for your teammates to answer the user query."
 """)
 
 
 # Query Processor Task
-QUERY_PROCESSOR_PROMPT = dedent("""
+QUERY_PROCESS_PROMPT = dedent("""
 User query: {user_query}
 
 Analyze the following user query and prepare it for retrieval:
@@ -67,19 +67,17 @@ QUERY_PROCESSOR_EXPECTED_OUTPUT = dedent("""
 Your output should be a Pydantic object of type Queries with the following structure:
 Queries(
     original_query: str,
-    transformed_query: Optional[str],
+    transformed_queries: Optional[List[str]],
     decomposed_queries: Optional[List[str]]
 )
 
 Ensure that:
 - If needs_retrieval is True, provide transformed_query and optionally decomposed_queries.
-- If needs_retrieval is False, only set this boolean field to False.
-- decomposed_queries, if provided, should be a list of strings, each representing a sub-query.
-- All fields should be properly filled according to your analysis.
+- decomposed_queries and transformed_queries, if provided, should be a list of strings, each representing a sub-query.
 """)                            
 
 # First Query Processor Task
-CLASSIFICATION_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
+SUB_QUERIES_CLASSIFICATION_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
 Using the query decomposition and transformation results from the context, perform classification and identify relevant collections:
 
 Expected context: You will receive a Queries object with the following structure:
@@ -90,81 +88,111 @@ Queries(
     decomposed_queries: Optional[List[str]]
 )
 
-1. Use the list_all_collections_tool to get a list of all available collections.
+Use the list_all_collections_tool to get a list of all available collections.
 
-2. For every query(in original query, transformed query, decomposed_queries) in Queries:
+For every query(in original query, transformed query, decomposed_queries) in Queries:
 a. Classify the query as needing retrieval or not (by judging whether the query requires external data or time-sensitive information).
-- If retrieval is needed, store the query.
+- If retrieval is needed, store the query with the collection name.
     - Determine the most relevant collection name for the query from the list of collections.
     - If no collection is relevant, use None.
 - If retrieval is not needed, skip the query.
     - Elaborate on the reason for skipping in the justification.
 
-3. Compile a QueriesIdentification only for queries that need retrieval.
+Compile a QueriesIdentification only for queries that need retrieval.
 A QueriesIdentification object should contain the queries and their corresponding collection names.
 """)
 
-CLASSIFICATION_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
-Using the query decomposition and transformation results from the context, perform classification,
-and set the specific collection provided: {specific_collection} to collection name for all queries.
+SUB_QUERIES_CLASSIFICATION_PROMPT_WITH_SPECIFIC_COLLECTION = dedent("""
+Using the query decomposition and transformation results from the context, perform classification:
 
-Expected context: You will receive a list of Queries objects with the following structure:
+Expected context: You will receive a Queries object with the following structure:
+
 Queries(
     original_query: str,
     transformed_query: Optional[str],
     decomposed_queries: Optional[List[str]]
 )
 
-2. For every query(in original query, transformed query, decomposed_queries) in Queries:
+Specific Collection: {specific_collection}
+
+For every query(in original query, transformed query, decomposed_queries) in Queries:
 a. Classify the query as needing retrieval or not (by judging whether the query requires external data or time-sensitive information).
-- If retrieval is needed, store the query.
-    - Use the specific collection name provided in the task.
+- If retrieval is needed, store the query with the collection name.
+    - the collection name is the input of specific collection.
 - If retrieval is not needed, skip the query.
     - Elaborate on the reason for skipping in the justification.
 
-3. Compile a QueriesIdentification only for queries that need retrieval.
+Compile a QueriesIdentification only for queries that need retrieval.
 A QueriesIdentification object should contain the queries and their corresponding collection names.
-""")
+""")                                                            
 
-CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
+
+SUB_QUERIES_CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
 Your output should be a pydantc object with the following structure:
 class QueriesIdentification(BaseModel):
     queries: List[str]
     collection_name: List[Optional[str]]
 """)
 
-# RETRIEVAL_PROMPT = dedent("""
-# Using a QueriesIdentification object from the context, perform the retrieval process:
-# QueriesIdentification object:
-# - queries: List[str]
-# - collection_name: List[Optional[str]]
+RETRIEVAL_PROMPT = dedent("""
+Using a QueriesIdentification object from the context, perform the retrieval process:
+QueriesIdentification object:
+- queries: List[str]
+- collection_name: List[Optional[str]]
 
-# 1. Extract the list of collection names and list of queries from the QueriesIdentification object.
+1. Extract the list of collection names and list of queries from the QueriesIdentification object.
 
-# 2. Use the _retrieve tools with these two lists:
-# - The first argument should be the list of collection names from QueriesIdentification.
-# - The second argument should be the list of queries from QueriesIdentification.
-# - Decide the top_k value based on the expected number of relevant results. (e.g., top_k=5)
+2. Use the _retrieve tools with these two lists:
+- The first argument should be the list of collection names from QueriesIdentification.
+- The second argument should be the list of queries from QueriesIdentification.
+- Decide the top_k value based on the expected number of relevant results. (e.g., top_k=5)
 
-# 3. The _retrieve tool will return a dictionary of 2 lists:
-# - content: List[str]  # Retrieved content for each query
-# - metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
-# There is no duplicate content entries in the retrieved data.
-
-# 4. Compile these results into a pydantic object:
-# RefinedRetrievalData:
-# - content: List[str]  # Extracted from retrieved_data
-# - metadata: List[Dict[str, Any]]  # Extracted from retrieved_data
-# """)
+3. The _retrieve tool will return a dictionary of 2 lists:
+- content: List[str]  # Retrieved content for each query
+- metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
+There is no duplicate content entries in the retrieved data.
+""")
 
 # 4. Remove irrelevant data:
 # a. For each content entry, evaluate its relevance to the original user query: {user_query}.
 # b. Remove content entries that are deemed irrelevant, along with their corresponding metadata.
 # c. If any concerns about relevance arise, don't remove the entire entry.
 
-# RETRIEVAL_EXPECTED_OUTPUT = dedent("""
-# A RefinedRetrievalData pydantic object containing consolidated metadata and content lists.
-# """)
+RETRIEVAL_EXPECTED_OUTPUT = dedent("""
+A RefinedRetrievalData pydantic object containing consolidated metadata and content lists.
+""")
+
+RETRIEVAL_GRAPH_TOPIC_PROMPT = dedent("""
+User Query: "{user_query}"
+
+Task:
+1. Use the QueriesIdentification object from the context:
+   - Extract the list of queries from QueriesIdentification.queries
+   - Ignore the collection_name field
+
+2. Retrieve relevant topics:
+   - Use the _retrieve_graph_topic tool with the extracted list of queries
+   - Find the top_k most relevant topics related to these queries
+
+3. Generate hypothetical answers:
+   - Based on the retrieved topics and the original user query, generate a list of possible answers or responses
+   - These answers should be hypothetical and aimed at addressing the user's query in light of the retrieved topics
+
+4. Store results using _retrieval_details tool:
+   - Use the _retrieval_details tool to store the generated information
+   - Pass the following to the _retrieval_details tool:
+     a. The list of retrieved relevant topics from step 2
+     b. The list of generated hypothetical answers from step 3
+
+Ensure that:
+1. The _retrieve_graph_topic tool is used correctly to obtain the initial topics
+2. The hypothetical answers are generated based on both the retrieved topics and the user query
+3. The _retrieval_details tool is used to store both the topics and the generated answers
+4. The process follows the exact order: retrieve topics, generate answers, store both in _retrieval_details
+
+Note: The final step of using the _retrieval_details tool is crucial for storing the information for subsequent retrieval steps. There's no need to create a separate RetrievalGlobalTopics object in this process.
+""")
+
 
 RERANK_PROMPT = dedent("""
 Perform a reranking process on the retrieved content based on its relevance to the user query.

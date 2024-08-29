@@ -47,6 +47,8 @@ class DatasetLoader:
             return self._process_trivia_qa(df)
         elif dataset_name == 'hotpot_qa':
             return self._process_hotpot_qa(df)
+        elif dataset_name == 'deepmind/narrativeqa':
+            return self._process_narrativeqa(df)
         else:
             raise ValueError(f"Unsupported dataset: {dataset_name}")
 
@@ -158,6 +160,28 @@ class DatasetLoader:
                 documents.append(document)
                 previous_document = document
                 
+        # 添加新列到原始 DataFrame
+        df['generated_response'] = ''
+        df['retrieved_context'] = ''
+        
+        return documents, df
+    
+    def _process_narrativeqa(self, df: pd.DataFrame) -> Tuple[List[Dict[str, Union[str, Dict]]], pd.DataFrame]:
+        documents = []
+        previous_document = None
+        for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing Narrative QA"):
+            # document = {
+            #     "content": f"Title: {row['title']}\nContent: {row['document']}",
+            #     "metadata": {
+            #         "dataset_name": "narrativeqa",
+            #         "title": row['title']
+            #     }
+            # }
+            if document == previous_document:
+                continue
+            documents.append(document)
+            previous_document = document
+            
         # 添加新列到原始 DataFrame
         df['generated_response'] = ''
         df['retrieved_context'] = ''

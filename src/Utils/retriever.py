@@ -5,13 +5,19 @@ from .embedder import Embedder
 from Config import constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
+from .graph_database import GraphDatabase
 from typing import List, Dict, Any, Union, Optional
 load_dotenv()
 
 class Retriever:
-    def __init__(self, vectordatabase: Optional[VectorDatabase] = None, embedder: Optional[Embedder] = None):
+    def __init__(self, 
+                vectordatabase: Optional[VectorDatabase] = None,
+                graphdatabase: Optional[GraphDatabase] = None, 
+                embedder: Optional[Embedder] = None,
+                ):
         self.embedder = embedder if embedder else Embedder()
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
+        self.graphdatabase = graphdatabase if graphdatabase else GraphDatabase()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=self.openai_api_key)
         print("Retriever initialized")

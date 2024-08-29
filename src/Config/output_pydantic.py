@@ -12,7 +12,7 @@ class UserQueryClassification(BaseModel):
 # For Query Processor
 class Queries(BaseModel):
     original_query: str
-    transformed_query: Optional[str] = None
+    transformed_queries: Optional[List[str]] = None
     decomposed_queries: Optional[List[str]] = None
     
 # For Classifier (Classification)
@@ -22,6 +22,15 @@ class QueriesIdentification(BaseModel):
             
 # For Retriever (Retrieval)
 class RefinedRetrievalData(BaseModel):
+    content: List[str]
+    metadata: List[Dict[str, Any]]
+    
+class RetrievalGlobalTopics(BaseModel):
+    topics: List[str]
+    answers: List[str]
+    
+class RetrievalDetailedData(BaseModel):
+    topics: List[str]
     content: List[str]
     metadata: List[Dict[str, Any]]
     
