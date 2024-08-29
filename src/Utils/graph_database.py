@@ -191,5 +191,9 @@ class GraphDatabase:
             result_transformer_= Result.to_df,
         )
     
+    def local_query(self, cypher: str, params: Dict[str, Any] = {}):
+        index_
+    
+    
     def graph_topic_query(self, query: str):
         pass

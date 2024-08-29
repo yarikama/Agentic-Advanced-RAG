@@ -63,7 +63,7 @@ b. Identify any complex or ambiguous terms that may require further decompositio
 c. Decompose the transformed query into simpler sub-queries if necessary.
 """)
 
-QUERY_PROCESSOR_EXPECTED_OUTPUT = dedent("""
+QUERY_PROCESS_EXPECTED_OUTPUT = dedent("""
 Your output should be a Pydantic object of type Queries with the following structure:
 Queries(
     original_query: str,
