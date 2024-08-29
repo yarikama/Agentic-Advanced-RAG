@@ -75,31 +75,6 @@ Ensure that:
 - decomposed_queries and transformed_queries, if provided, should be a list of strings, each representing a sub-query.
 """)                            
 
-TOPIC_SEARCHING_PROMPT = dedent("""
-1. Analyze the user's question and the provided data tables.
-2. Generate key points that address the user's question based on the data.
-3. For each key point:
-   - Write a comprehensive description.
-   - Assign an importance score (0-100).
-   - Create 2-3 example sentences that might appear in documents related to this key point.
-4. Format the response as a TopicSearchingResult object containing a list of TopicSearchingEntity objects.
-5. Ensure all information is supported by the provided data.
-6. If the answer is unknown or data is insufficient, create a single TopicSearchingEntity with a score of 0 and appropriate description and example sentences.
-
-""")
-
-TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
-The response should be formatted as a Pydantic object with the following structure:
-
-class TopicSearchingEntity(BaseModel):
-    description: str
-    score: int
-    example_sentence: List[str]
-
-class TopicSearchingResult(BaseModel):
-    topics: List[TopicSearchingEntity]
-""")
-
 
 # First Query Processor Task
 SUB_QUERIES_CLASSIFICATION_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
@@ -153,6 +128,30 @@ Your output should be a pydantc object with the following structure:
 class SubQueriesClassificationResult(BaseModel):
     queries: List[str]
     collection_name: List[Optional[str]]
+""")
+
+TOPIC_SEARCHING_PROMPT = dedent("""
+1. Analyze the user's question and the provided data tables.
+2. Generate key points that address the user's question based on the data.
+3. For each key point:
+   - Write a comprehensive description.
+   - Assign an importance score (0-100).
+   - Create 2-3 example sentences that might appear in documents related to this key point.
+4. Format the response as a TopicSearchingResult object containing a list of TopicSearchingEntity objects.
+5. Ensure all information is supported by the provided data.
+6. If the answer is unknown or data is insufficient, create a single TopicSearchingEntity with a score of 0 and appropriate description and example sentences.
+""")
+
+TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
+The response should be formatted as a Pydantic object with the following structure:
+
+class TopicSearchingEntity(BaseModel):
+    description: str
+    score: int
+    example_sentence: List[str]
+
+class TopicSearchingResult(BaseModel):
+    topics: List[TopicSearchingEntity]
 """)
 
 RETRIEVAL_PROMPT = dedent("""

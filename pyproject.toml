@@ -36,6 +36,7 @@ streamlit-pydantic = "^0.6.0"
 pyarrow = "^17.0.0"
 neo4j = "^5.23.1"
 lshashpy3 = "^0.0.9"
+pytest = "^8.3.2"
 
 
 [tool.poetry.group.dev.dependencies]

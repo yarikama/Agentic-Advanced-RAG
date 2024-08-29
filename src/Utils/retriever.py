@@ -5,19 +5,19 @@ from .embedder import Embedder
 from Config import constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
-from .graph_database import GraphDatabase
+from .knowledge_graph_database import KnowledgeGraphDatabase
 from typing import List, Dict, Any, Union, Optional
 load_dotenv()
 
 class Retriever:
     def __init__(self, 
                 vectordatabase: Optional[VectorDatabase] = None,
-                graphdatabase: Optional[GraphDatabase] = None, 
+                graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
                 embedder: Optional[Embedder] = None,
                 ):
         self.embedder = embedder if embedder else Embedder()
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
-        self.graphdatabase = graphdatabase if graphdatabase else GraphDatabase()
+        self.graphdatabase = graphdatabase if graphdatabase else KnowledgeGraphDatabase()
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=self.openai_api_key)
         print("Retriever initialized")
@@ -109,11 +109,15 @@ class Retriever:
         dense_search_request = self.dense_search_request(dense_query, "dense_vector")
         results = self.vectordatabase.search(collection_name, dense_search_request, top_k)
         return results
-        
-if __name__ == "__main__":
-    vectordatabase = VectorDatabase()
-    embedder = Embedder()
-    retriever = Retriever(vectordatabase, embedder)
-    print(retriever.dense_retrieve("RAG", "What is RAG?"))
     
+    def global_retriever(self, query: str, level: int) -> str:
+        community_data = self.graphdatabase.db_query(
+        """
+        MATCH (c:__Community__)
+        WHERE c.level = $level
+        RETURN c.full_content AS output
+        """,
+            params={"level": level},
+        )
+        return community_data
     

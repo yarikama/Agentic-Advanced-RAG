@@ -42,6 +42,7 @@ class Tools:
         self.create_list_all_collections_tool = create_tool(self._list_all_collections)
         self.create_retrieve_data_tool = create_tool(self._retrieve_data)
         self.create_dense_retrieve_data_tool = create_tool(self._dense_retrieve_data)
+        self.create_global_retrieve_topic_tool = create_tool(self._global_retrieve_topic)
         self.create_ranker_tool = create_tool(self._rerank)
         self.create_calculator_tool = create_tool(self._calculator)
         self.create_basic_statistics_tool = create_tool(self._basic_statistics)
@@ -205,6 +206,17 @@ class Tools:
             "content": content,
             "metadata": metadata
         }
+        
+    def _global_retrieve_topic(self, query: str, level: int) -> str:
+        """
+        <desc>Retrieves community data for a given query and level using a global retriever</desc>
+        
+        query: The query string to search for
+        level: The level of community data to retrieve, there are 3 levels: 0, 1, 2, and 3, level 0 is the most general and level 3 is the most specific
+        """
+        return self.retriever.global_retriever(query, level)
+        
+        
     
     def _calculator(self, expression: str) -> str:
         """

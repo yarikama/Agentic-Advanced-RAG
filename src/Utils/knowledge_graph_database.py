@@ -8,7 +8,7 @@ from langchain_community.graphs import Neo4jGraph
 
 load_dotenv()
 
-class GraphDatabase:
+class KnowledgeGraphDatabase:
     def __init__(self):
         self.neo4j_uri = os.getenv("NEO4J_URI")
         self.neo4j_user = os.getenv("NEO4J_USER")
@@ -17,13 +17,7 @@ class GraphDatabase:
         self.driver = GraphDatabase.driver(
             self.neo4j_uri, 
             auth=(self.neo4j_user, self.neo4j_password)
-        ) 
-        self.knowledge_graph = Neo4jGraph(
-            url=self.neo4j_uri,
-            user=self.neo4j_user,
-            password=self.neo4j_password,
-            database=self.neo4j_database,
-        )        
+        )       
         print("GraphDatabase initialized.")
     
     def batched_import(self, statement, df, batch_size=1000):
@@ -191,9 +185,3 @@ class GraphDatabase:
             result_transformer_= Result.to_df,
         )
     
-    def local_query(self, cypher: str, params: Dict[str, Any] = {}):
-        index_
-    
-    
-    def graph_topic_query(self, query: str):
-        pass

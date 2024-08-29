@@ -112,12 +112,13 @@ class Tasks:
             callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
-    def _topic_searching_task(self):
+    def _topic_searching_task(self, context_task_array: List[Task]):
         return Task(
             agent=self.agents.create_topic_searcher,
-            description=TOPIC_SEARCHING_PROMPT.format(user_query=self.user_query),
+            description=TOPIC_SEARCHING_PROMPT,
             expected_output=TOPIC_SEARCHING_EXPECTED_OUTPUT,
             output_pydantic=TopicSearchingResult,
+            context=context_task_array,
             tools=self.tools.get_tools({"topic_searching": False}),
             callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
@@ -133,12 +134,12 @@ class Tasks:
             callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
 
-    def _retrieval_detail_from_topic_task(self, context_task_array: List[Task]):
+    def _retrieval_detail_data_from_topic_task(self, context_task_array: List[Task]):
         return Task(
             agent=self.agents.create_retriever,
-            description=RETRIEVAL_DETAIL_FROM_TOPIC_PROMPT.format(user_query=self.user_query),
-            # expected_output=RETRIEVAL_DETAIL_FROM_TOPIC_EXPECTED_OUTPUT,
-            output_pydantic=RetrievalResult,
+            description=RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT.format(user_query=self.user_query),
+            expected_output=RETRIEVAL_DETAIL_FROM_TOPIC_EXPECTED_OUTPUT,
+            # output_pydantic=RetrievalResult,
             context=context_task_array,
             tools=self.tools.get_tools({"retrieval_detail_from_topic": True}),
             callback=CustomStreamlitCallbackHandler() if self.is_callback else None,

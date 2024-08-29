@@ -8,16 +8,15 @@ class OverallState(BaseModel):
     specific_collection: Optional[str] = None
     
     # pydantic models
-    user_query_classification: Optional[UserQueryClassification] = None
-    queries: Optional[Queries] = None
-    queries_identification: Optional[QueriesIdentification] = None
-    refined_retrieval_data: Optional[RefinedRetrievalData] = None
-    ranked_retrieval_data: Optional[RankedRetrievalData] = None
-    audit_result: Optional[AuditResult] = None
-    update_condition: Optional[UpdateCondition] = None
+    user_query_classification_result: Optional[UserQueryClassificationResult] = None
+    queries_process_result: Optional[QueriesProcessResult] = None
+    sub_queries_classification_result: Optional[SubQueriesClassificationResult] = None
+    retrieval_result: Optional[RetrievalResult] = None
+    rerank_result: Optional[RerankingResult] = None
+    response_audit_result: Optional[ResponseAuditResult] = None
         
     # Output
-    result: str = None
+    generation_result: str = None
     repeat_times: int = 0
 
 class SingleState(BaseModel):
