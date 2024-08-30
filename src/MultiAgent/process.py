@@ -21,15 +21,9 @@ class MultiAgent_RAG:
        
         # Callback
         # self.callback_function = rag_config.callback_function if rag_config.callback_function else None
-       
-        # Utils
-        self.vectordatabase = rag_config.vector_database if rag_config.vector_database else VectorDatabase()
-        self.embedder = rag_config.embedder if rag_config.embedder else Embedder()
-        self.retriever = Retriever(self.vectordatabase, self.embedder)
-        self.data_processor = DataProcessor(self.vectordatabase, self.embedder)
-       
+        
         # Tools, Agents, Tasks
-        self.tools = Tools(self.vectordatabase, self.embedder, self.retriever, self.data_processor)
+        self.tools = Tools()
         # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
         self.agents = Agents(self.model_temperature, self.model_name, self.tools)
         self.tasks = Tasks(self.agents, self.tools)

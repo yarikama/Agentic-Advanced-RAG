@@ -215,6 +215,11 @@ Ensure there are no duplicates in the final set of retrieved data.
 The goal is to provide comprehensive, non-redundant information related to the high-scoring topics.
 """)
 
+RETRIEVAL_DETAIL_DATA_FROM_TOPIC_EXPECTED_OUTPUT = dedent("""
+A RetrievalResult pydantic object containing consolidated metadata and content lists.
+""")
+
+
 
 RERANK_PROMPT = dedent("""
 Perform a reranking process on the retrieved content based on its relevance to the user query.
@@ -345,4 +350,11 @@ Steps:
 3. If the Response Auditor does not approve or the Classification result indicates no retrieval is needed, skip the insertion process.
 
 3. Output whether the insertion operation was successful or skipped and explain the reason in pydanctic object.
+""")
+
+DATABASE_UPDATE_EXPECTED_OUTPUT= dedent("""
+A pydantic object with the following structure:
+class DatabaseUpdateResult(BaseModel):
+    success: bool
+    reason: str
 """)

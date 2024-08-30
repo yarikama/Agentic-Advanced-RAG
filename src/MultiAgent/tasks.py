@@ -130,9 +130,9 @@ class Tasks:
     def _retrieval_detail_data_from_topic_task(self, context_task_array: List[Task]):
         return Task(
             agent=self.agents.create_retriever,
-            description=RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT.format(user_query=self.user_query),
-            # expected_output=RETRIEVAL_DETAIL_FROM_TOPIC_EXPECTED_OUTPUT,
-            # output_pydantic=RetrievalResult,
+            description=RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT.format(user_query=self.user_query, specific_collection=self.specific_collection),
+            expected_output=RETRIEVAL_DETAIL_DATA_FROM_TOPIC_EXPECTED_OUTPUT,
+            output_pydantic=RetrievalResult,
             context=context_task_array,
             tools=self.tools.get_tools(**{"retrieve_data": True}),
         )
@@ -171,7 +171,8 @@ class Tasks:
             ),
             agent=self.agents.create_database_updater,
             context=context_task_array,
-            tools=self.tools.get_tools(**{"database_updater": False}),
+            tools=self.tools.get_tools(**{"insert_qa_into_db": False}),
+            expected_output=DATABASE_UPDATE_EXPECTED_OUTPUT,
         )
         
     def _database_update_task_with_specific_collection(self, context_task_array: List[Task]):
@@ -179,5 +180,6 @@ class Tasks:
             description=DATABASE_UPDATER_PROMPT_WITHOUT_SPECIFIC_COLLECTION.format(user_query=self.user_query),
             agent=self.agents.create_database_updater,
             context=context_task_array,
-            tools=self.tools.get_tools(**{"database_updater": False}),
+            tools=self.tools.get_tools(**{"insert_qa_into_db": False}),
+            expected_output=DATABASE_UPDATE_EXPECTED_OUTPUT,
         )
