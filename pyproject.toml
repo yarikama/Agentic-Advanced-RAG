@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "aaai-experiment"
+name = "coling-experiment"
 version = "0.1.0"
-description = ""
+description = "Modular Agentic RAG"
 authors = ["yarikama <amaki30226@gmail.com>"]
 readme = "README.md"
 
