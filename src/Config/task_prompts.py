@@ -183,26 +183,37 @@ RETRIEVAL_EXPECTED_OUTPUT = dedent("""
 A RetrievalResult pydantic object containing consolidated metadata and content lists.
 """)
 
-RETRIEVAL_ = dedent("""
-Using a SubQueriesClassificationResult object from the context, perform the retrieval process:
+RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT = dedent("""
+specific_collection = {specific_collection}
 
-class SubQueriesClassificationResult(BaseModel):
-    queries: List[str]
-    collection_name: List[Optional[str]]
+You will be given a list of TopicSearchingEntity objects. Each object has the following structure:
+class TopicSearchingEntity:
+description: str
+score: float
+example_sentences: List[str]
+Select the topics or example sentences with high scores from the TopicSearchingEntity objects. Prioritize those with higher scores as they are likely to be more relevant.
+For each selected high-scoring topic or example sentence:
+a. Use it as a query for the _retrieve tool.
+b. When using the _retrieve tool, include the specific_collection as a parameter.
+c. The _retrieve tool will return a dictionary with two lists:
 
-1. Extract the list of collection names and list of queries from the SubQueriesClassificationResult object.
+content: List[str]  # Retrieved content for each query
+metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
 
-2. Use the _retrieve tools with these two lists:
-- The first argument should be the list of collection names from SubQueriesClassificationResult.
-- The second argument should be the list of queries from SubQueriesClassificationResult.
-- Decide the top_k value based on the expected number of relevant results. (e.g., top_k=5)
 
-3. The _retrieve tool will return a dictionary of 2 lists:
-- content: List[str]  # Retrieved content for each query
-- metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
-There is no duplicate content entries in the retrieved data.
+After retrieving data for all selected topics/sentences:
+a. Combine all the retrieved content and metadata.
+b. Remove any duplicate content entries from the combined results.
+Organize the final set of unique, relevant content and metadata.
+Present the retrieved information in a clear, structured format, linking each piece of content to its corresponding metadata where applicable.
+
+Remember:
+
+Focus on using the most relevant topics or sentences for retrieval.
+Always use the specific_collection when calling the _retrieve tool.
+Ensure there are no duplicates in the final set of retrieved data.
+The goal is to provide comprehensive, non-redundant information related to the high-scoring topics.
 """)
-
 
 
 RERANK_PROMPT = dedent("""

@@ -13,14 +13,14 @@ from Config.rag_config import RAGConfig
 
 load_dotenv()
 
-class LLMMA_RAG_System:
-    def __init__(self, rag_config: RAGConfig):
+class MultiAgent_RAG:
+    def __init__(self, rag_config: RAGConfig = RAGConfig()):
         # LLM Settings
         self.model_name = rag_config.model_name if rag_config.model_name else const.MODEL_NAME
         self.model_temperature = rag_config.model_temperature if rag_config.model_temperature else const.MODEL_TEMPERATURE  
        
         # Callback
-        self.callback_function = rag_config.callback_function
+        # self.callback_function = rag_config.callback_function if rag_config.callback_function else None
        
         # Utils
         self.vectordatabase = rag_config.vector_database if rag_config.vector_database else VectorDatabase()
@@ -30,49 +30,96 @@ class LLMMA_RAG_System:
        
         # Tools, Agents, Tasks
         self.tools = Tools(self.vectordatabase, self.embedder, self.retriever, self.data_processor)
-        self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
+        # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
+        self.agents = Agents(self.model_temperature, self.model_name, self.tools)
         self.tasks = Tasks(self.agents, self.tools)
 
         print("LLMMA RAG System initialized")
-
-    def user_query_classification_run(self):
-        # Any update Here
         
-        
-        # Specific node agents and tasks
-        node_agents = ["Classifier"]
-        node_tasks = ["User Query Classification"]
-        
-        # Crew with process
-        self.crew = Crew(  
-            agents=self.agents.get_agents(*node_agents),
-            tasks=self.tasks.get_tasks(*node_tasks),
-            process=Process.sequential,
-            verbose=True,
-            output_log_file="logs.txt",
-        )
-        return {
-            "user_query_classification": self.crew.kickoff().pydantic
-        }
+    def update_from_user_input(self, user_query: str, specific_collection: str):
+        self.tasks.update_tasks(user_query=user_query, specific_collection=specific_collection)
     
-    def retrieval_and_generation_run(self):
-        # Crew with process
-        self.crew = Crew(  
-            agents=self.agents.get_retrieval_and_generation_node_agent(),
-            tasks=self.tasks.get_retrieval_and_generation_node_tasks(),
-            process=Process.sequential,
+    def run_crew(self, **kwargs):
+        self.crew = Crew(
+            agents=self.agents.get_agents(*kwargs["node_agents"]),
+            tasks=self.tasks.get_tasks(*kwargs["node_tasks"]),
+            process=Process.hierarchical if kwargs["node_process"] == "hierarchical" else Process.sequential,
             verbose=True,
-            output_log_file="logs.txt",
         )
         self.crew.kickoff()
+        
+    def user_query_classification_run(self):
+        self.run_crew(   
+            node_agents=["Classifier"],
+            node_tasks=["User Query Classification"],
+            node_process="sequential"
+        )
         return {
-            "queries": self.tasks.create_query_processor_task.output.pydantic,
-            "queries_identification": self.tasks.create_classification_task.output.pydantic,
-            "refined_retrieval_data": self.tasks.create_retrieval_task.output.pydantic,
-            "ranked_retrieval_data": self.tasks.create_rerank_task.output.pydantic,
-            "result": self.tasks.create_summarizer_task.output,
-            "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
+            "user_query_classification": self.tasks.create_user_query_classification_task.output.pydantic
         }
+    
+    def plan_coordination_run(self):
+        self.run_crew(   
+            node_agents=["Plan Coordinator"],
+            node_tasks=["Plan Coordination"],
+            node_process="sequential"
+        )
+        return {
+            "queries": self.tasks.create_plan_coordination_task.output.pydantic
+        }
+        
+    def query_process_run(self):
+        self.run_crew(   
+            node_agents=["Query Processor"],
+            node_tasks=["Query Process"],
+            node_process="sequential"
+        )
+        return {
+            "queries": self.tasks.create_query_process_task.output.pydantic
+        }
+    
+    def sub_queries_classification_run(self):
+        self.run_crew(   
+            node_agents=["Classifier"],
+            node_tasks=["Sub Queries Classification"],
+            node_process="sequential"
+        )
+        return {
+            "queries_identification_list": self.tasks.create_sub_queries_classification_task_with_specific_collection.output.pydantic
+        }
+        
+    def top_searching_run(self):
+        self.run_crew(   
+            node_agents=["Topic Searcher"],
+            node_tasks=["Topic Searching"],
+            node_process="sequential"
+        )
+        return {
+            "queries": self.tasks.create_topic_searching_task.output.pydantic
+        }
+        
+    
+    
+    # def retrieval_and_generation_run(self):
+            
+
+    #     # Crew with process
+    #     self.crew = Crew(  
+    #         agents=self.agents.get_retrieval_and_generation_node_agent(),
+    #         tasks=self.tasks.get_retrieval_and_generation_node_tasks(),
+    #         process=Process.sequential,
+    #         verbose=True,
+    #         output_log_file="logs.txt",
+    #     )
+    #     self.crew.kickoff()
+    #     return {
+    #         "queries": self.tasks.create_query_processor_task.output.pydantic,
+    #         "queries_identification": self.tasks.create_classification_task.output.pydantic,
+    #         "refined_retrieval_data": self.tasks.create_retrieval_task.output.pydantic,
+    #         "ranked_retrieval_data": self.tasks.create_rerank_task.output.pydantic,
+    #         "result": self.tasks.create_summarizer_task.output,
+    #         "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
+    #     }
     
     def generation_run(self):
         # Any update Here

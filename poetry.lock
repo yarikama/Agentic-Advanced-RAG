@@ -878,19 +878,19 @@ cron = ["capturer (>=2.4)"]
 
 [[package]]
 name = "crewai"
-version = "0.41.1"
+version = "0.51.1"
 description = "Cutting-edge framework for orchestrating role-playing, autonomous AI agents. By fostering collaborative intelligence, CrewAI empowers agents to work together seamlessly, tackling complex tasks."
 optional = false
 python-versions = "<=3.13,>=3.10"
 files = [
-    {file = "crewai-0.41.1-py3-none-any.whl", hash = "sha256:27ec7b414b9f1344c63bfea4b5823613d97005b9664a7d4843242728c07f936b"},
-    {file = "crewai-0.41.1.tar.gz", hash = "sha256:ef07c6a9477423bd204dfeb9541d60408e3278695471ec75a8337a0f73fa290e"},
+    {file = "crewai-0.51.1-py3-none-any.whl", hash = "sha256:c36f23bb317726c84249fd1341363c7b9916ec0865dbe1c273ced94451c4dd89"},
+    {file = "crewai-0.51.1.tar.gz", hash = "sha256:3266b08db6f06162816cb83b291b64ab4d8cd10b024b82478f62f5b368a32ce6"},
 ]
 
 [package.dependencies]
 appdirs = ">=1.4.4,<2.0.0"
 click = ">=8.1.7,<9.0.0"
-crewai-tools = {version = ">=0.4.26,<0.5.0", optional = true, markers = "extra == \"tools\""}
+crewai-tools = {version = ">=0.8.3,<0.9.0", optional = true, markers = "extra == \"tools\""}
 embedchain = ">=0.1.114,<0.2.0"
 instructor = "1.3.3"
 json-repair = ">=0.25.2,<0.26.0"
@@ -906,17 +906,17 @@ regex = ">=2023.12.25,<2024.0.0"
 
 [package.extras]
 agentops = ["agentops (>=0.3.0,<0.4.0)"]
-tools = ["crewai-tools (>=0.4.26,<0.5.0)"]
+tools = ["crewai-tools (>=0.8.3,<0.9.0)"]
 
 [[package]]
 name = "crewai-tools"
-version = "0.4.26"
+version = "0.8.3"
 description = "Set of tools for the crewAI framework"
 optional = false
 python-versions = "<=3.13,>=3.10"
 files = [
-    {file = "crewai_tools-0.4.26-py3-none-any.whl", hash = "sha256:c5d062a613f65bda4af2621eba66b14a6227b0e1b12ef385828a28259f5d6ce5"},
-    {file = "crewai_tools-0.4.26.tar.gz", hash = "sha256:f73569b543a886f0ef52cc8ae5dc7a3a287be9f7614518e4c64886454aeb5c4b"},
+    {file = "crewai_tools-0.8.3-py3-none-any.whl", hash = "sha256:a54a10c36b8403250e13d6594bd37db7e7deb3f9fabc77e8720c081864ae6189"},
+    {file = "crewai_tools-0.8.3.tar.gz", hash = "sha256:f0317ea1d926221b22fcf4b816d71916fe870aa66ed7ee2a0067dba42b5634eb"},
 ]
 
 [package.dependencies]
@@ -7678,4 +7678,4 @@ test = ["big-O", "importlib-resources", "jaraco.functools", "jaraco.itertools", 
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.10,<=3.13"
-content-hash = "d21c2fbdfc28beeb15c0faefdb3455c5603d0d76a17ebe17d7482f9ab4d700d8"
+content-hash = "a241df9497e31d4ef243deccb56c6936290f672c6b58eb0b6579d1f58e5037ec"

@@ -1,4 +1,3 @@
-from Frontend import *
 from crewai import Task
 from typing import List
 from .tools import Tools
@@ -11,27 +10,27 @@ class Tasks:
     def __init__(self, agents: Agents, tools: Tools):
         self.tools = tools
         self.agents = agents
-        self.is_callback = False
         print("Tasks initialized")
         
     # Update the task with new query and collection
     def update_tasks(self, **kwargs):
-        self.user_query = kwargs.get("query", None)
+        self.user_query = kwargs.get("user_query", None)
         self.specific_collection = kwargs.get("specific_collection", None)
         
         # Initialize the tasks
-        self.create_user_query_classification_task = self._user_query_classification_task()
-        self.create_plan_coordination_task = self._plan_coordination_task()
-        self.create_query_process_task = self._query_process_task()
-        self.create_topic_searching_task = self._topic_searching_task()
-        self.create_sub_queries_classification_task_with_specific_collection = self._sub_queries_classification_task_with_specific_collection()
-        self.create_sub_queries_classification_task_without_specific_collection = self._sub_queries_classification_task_without_specific_collection()
-        self.create_retrieval_task = self._retrieval_task()
-        self.create_reranking_task = self._reranking_task()
-        self.create_generation_task = self._generation_task()
-        self.create_response_audit_task = self._response_audit_task()
-        self.create_database_update_task_with_specific_collection = self._database_update_task_with_specific_collection()
-        self.create_database_update_task_without_specific_collection = self._database_update_task_without_specific_collection()
+        self.create_user_query_classification_task                              = self._user_query_classification_task()
+        self.create_plan_coordination_task                                      = self._plan_coordination_task()
+        self.create_query_process_task                                          = self._query_process_task()
+        self.create_sub_queries_classification_task_with_specific_collection    = self._sub_queries_classification_task_with_specific_collection([self.create_query_process_task])
+        self.create_sub_queries_classification_task_without_specific_collection = self._sub_queries_classification_task_without_specific_collection([self.create_query_process_task])
+        self.create_topic_searching_task                                        = self._topic_searching_task([self.create_sub_queries_classification_task_with_specific_collection, self.create_sub_queries_classification_task_without_specific_collection])
+        self.create_retrieval_task                                              = self._retrieval_task([self.create_sub_queries_classification_task_with_specific_collection, self.create_sub_queries_classification_task_without_specific_collection])
+        self.create_retrieval_detail_data_from_topic_task                       = self._retrieval_detail_data_from_topic_task([self.create_topic_searching_task])
+        self.create_reranking_task                                              = self._reranking_task([self.create_retrieval_task, self.create_retrieval_detail_data_from_topic_task])
+        self.create_generation_task                                             = self._generation_task([self.create_reranking_task])
+        self.create_response_audit_task                                         = self._response_audit_task([self.create_generation_task])
+        self.create_database_update_task_with_specific_collection               = self._database_update_task_with_specific_collection([self.create_response_audit_task])
+        self.create_database_update_task_without_specific_collection            = self._database_update_task_without_specific_collection([self.create_response_audit_task])
         
         self.tasks_map = {
             "User Query Classification": self.create_user_query_classification_task,
@@ -50,17 +49,18 @@ class Tasks:
         print("User Query and Collection updated")
 
     def get_tasks(self, *args):
-        """Options:
-        "User Query Classification":
-        "Plan Coordination":
-        "Query Process":
-        "Topic Searching":
-        "Sub Queries Classification":
-        "Retrieval":
-        "Rerank":
-        "Generation":
-        "Response Audit"
-        "Database Update"
+        """
+        Options:
+            "User Query Classification",
+            "Plan Coordination",
+            "Query Process",
+            "Topic Searching",
+            "Sub Queries Classification",
+            "Retrieval",
+            "Rerank",
+            "Generation",
+            "Response Audit",
+            "Database Update",
         """
         return [self.tasks_map[task_name] for task_name in args]
         
@@ -71,7 +71,6 @@ class Tasks:
             description=USER_QUERY_CLASSIFICATION_PROMPT.format(user_query=self.user_query),
             expected_output=USER_QUERY_CLASSIFICATION_EXPECTED_OUTPUT,
             output_pydantic=UserQueryClassificationResult,
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _plan_coordination_task(self): 
@@ -79,7 +78,6 @@ class Tasks:
             agent=self.agents.create_plan_coordinator,
             description=PLAN_COORDINATION_PROMPT.format(user_query=self.user_query),
             expected_output=PLAN_COORDINATION_EXPECTED_OUTPUT,
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _query_process_task(self):
@@ -88,7 +86,6 @@ class Tasks:
             description=QUERY_PROCESS_PROMPT.format(user_query=self.user_query),
             expected_output=QUERY_PROCESS_EXPECTED_OUTPUT,
             output_pydantic=QueriesProcessResult,
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _sub_queries_classification_task_without_specific_collection(self, context_task_array: List[Task]):
@@ -98,8 +95,7 @@ class Tasks:
             expected_output=SUB_QUERIES_CLASSIFICATION_EXPECTED_OUTPUT,
             output_pydantic=SubQueriesClassificationResult,
             context=context_task_array,
-            tools=self.tools.get_tools({"list_all_collections": False}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"list_all_collections": False}),
         )
         
     def _sub_queries_classification_task_with_specific_collection(self, context_task_array: List[Task]):
@@ -109,7 +105,6 @@ class Tasks:
             expected_output=SUB_QUERIES_CLASSIFICATION_EXPECTED_OUTPUT,
             output_pydantic=SubQueriesClassificationResult,
             context=context_task_array,
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _topic_searching_task(self, context_task_array: List[Task]):
@@ -119,8 +114,7 @@ class Tasks:
             expected_output=TOPIC_SEARCHING_EXPECTED_OUTPUT,
             output_pydantic=TopicSearchingResult,
             context=context_task_array,
-            tools=self.tools.get_tools({"topic_searching": False}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"global_retrieve_topic": False}),
         )
 
     def _retrieval_task(self, context_task_array: List[Task]):
@@ -130,19 +124,17 @@ class Tasks:
             expected_output=RETRIEVAL_EXPECTED_OUTPUT,
             output_pydantic=RetrievalResult,
             context=context_task_array,
-            tools=self.tools.get_tools({"retrieval": True}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"retrieve_data": True}),
         )
 
     def _retrieval_detail_data_from_topic_task(self, context_task_array: List[Task]):
         return Task(
             agent=self.agents.create_retriever,
             description=RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT.format(user_query=self.user_query),
-            expected_output=RETRIEVAL_DETAIL_FROM_TOPIC_EXPECTED_OUTPUT,
+            # expected_output=RETRIEVAL_DETAIL_FROM_TOPIC_EXPECTED_OUTPUT,
             # output_pydantic=RetrievalResult,
             context=context_task_array,
-            tools=self.tools.get_tools({"retrieval_detail_from_topic": True}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"retrieve_data": True}),
         )
 
     def _reranking_task(self, context_task_array: List[Task]):
@@ -152,8 +144,7 @@ class Tasks:
             expected_output=RERANK_EXPECTED_OUTPUT,
             output_pydantic=RerankingResult,
             context=context_task_array,
-            tools=self.tools.get_tools({"rerank": True}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"rerank": True}),
         )
         
     def _generation_task(self, context_task_array: List[Task]):
@@ -162,7 +153,6 @@ class Tasks:
             description=GENERATION_PROMPT.format(user_query=self.user_query),
             expected_output=GENERATION_EXPECTED_OUTPUT,
             context=context_task_array,
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )
         
     def _response_audit_task(self, context_task_array: List[Task]):
@@ -172,7 +162,6 @@ class Tasks:
             expected_output=RESPONSE_AUDITOR_EXPECTED_OUTPUT,
             output_pydantic=ResponseAuditResult,
             context=context_task_array,
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
         )        
         
     def _database_update_task_without_specific_collection(self, context_task_array: List[Task]):
@@ -182,8 +171,7 @@ class Tasks:
             ),
             agent=self.agents.create_database_updater,
             context=context_task_array,
-            tools=self.tools.get_tools({"database_updater": False}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"database_updater": False}),
         )
         
     def _database_update_task_with_specific_collection(self, context_task_array: List[Task]):
@@ -191,6 +179,5 @@ class Tasks:
             description=DATABASE_UPDATER_PROMPT_WITHOUT_SPECIFIC_COLLECTION.format(user_query=self.user_query),
             agent=self.agents.create_database_updater,
             context=context_task_array,
-            tools=self.tools.get_tools({"database_updater": False}),
-            callback=CustomStreamlitCallbackHandler() if self.is_callback else None,
+            tools=self.tools.get_tools(**{"database_updater": False}),
         )

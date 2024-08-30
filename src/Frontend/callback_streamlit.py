@@ -21,7 +21,7 @@ from streamlit.runtime.scriptrunner.script_run_context import (
     get_script_run_ctx,
 )
 from streamlit.errors import NoSessionContext
-from typing import Any, Callable, TypeVar, cast
+from typing import Any, TypeVar, cast
 import streamlit as st
 from langchain_core.callbacks.base import BaseCallbackHandler
 
@@ -170,3 +170,7 @@ def render_streamlit_messages(messages: List[tuple]):
         elif message_type == "agent_finish":
             with st.expander("Agent Ended.", expanded=True):
                 st.write(content)
+                
+class PrintCallback(BaseCallbackHandler):
+    def printMsg(self, msg):
+        print(msg)

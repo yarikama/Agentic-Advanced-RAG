@@ -24,7 +24,7 @@ pdfplumber = "^0.11.2"
 llama-index = "^0.10.56"
 langchain-experimental = "^0.0.62"
 datasets = "^2.20.0"
-crewai = {extras = ["tools"], version = "^0.41.1"}
+crewai = {extras = ["tools"], version = "^0.51.1"}
 streamlit = "^1.37.1"
 pydantic = "^2.8.2"
 jq = "^1.7.0"

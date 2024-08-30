@@ -3,15 +3,17 @@ from textwrap import dedent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from .tools import Tools
-from Frontend import * 
+# from Frontend import * 
+from langchain_core.callbacks.base import BaseCallbackHandler
 
 class Agents:
-    def __init__(self, temperature: float, model_name: str, tools: Tools, callback_function: CustomStreamlitCallbackHandler):
+    def __init__(self, temperature: float, model_name: str, tools: Tools):
         load_dotenv()
         self.temperature = temperature
         self.tools = tools
         self.model_name = model_name
-        self.callback_function = callback_function
+        # self.callback_function = callback_function
+        self.callback_function = BaseCallbackHandler
         if self.model_name != "crewAI-llama3":
             self.llm = ChatOpenAI(
                 model = self.model_name,
@@ -50,7 +52,13 @@ class Agents:
         }
         
     def get_agents(self, *args):
-        return [self.agent_map[agent_name] for agent_name in args]
+        agents_list = []
+        for agent_name in args:
+            if agent_name in self.agent_map:
+                agents_list.append(self.agent_map[agent_name])
+            else:
+                raise ValueError(f"Agent '{agent_name}' not found in agent_map.")
+        return agents_list
     
     # # Getters for all agents in nodes
     # def get_user_query_classification_node_agent(self):
@@ -125,7 +133,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _plan_coordinator(self):
@@ -144,7 +152,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _query_processor(self):
@@ -163,7 +171,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _topic_searcher(self):
@@ -189,7 +197,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _retriever(self):
@@ -208,7 +216,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _reranker(self):
@@ -227,7 +235,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
 
     def _generator(self):
@@ -244,7 +252,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _response_auditor(self):
@@ -264,7 +272,7 @@ class Agents:
             llm=self.llm,
             memory=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )
         
     def _database_updater(self):
@@ -282,5 +290,5 @@ class Agents:
             memory=True,
             cache=True,
             allow_delegation=False,
-            callbacks=[self.callback_function],
+#             callbacks=[self.callback_function],
         )

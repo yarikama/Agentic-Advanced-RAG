@@ -2,6 +2,7 @@ import statistics
 from Utils import *
 import Config.constants as const
 from langchain.tools import StructuredTool
+from crewai_tools import tool
 from typing import List, Dict, Any, Callable, Tuple
 from langchain.pydantic_v1 import Field, create_model
 
@@ -52,6 +53,7 @@ class Tools:
             "list_all_collections": self.create_list_all_collections_tool,
             "retrieve_data": self.create_retrieve_data_tool,
             "dense_retrieve_data": self.create_dense_retrieve_data_tool,
+            "global_retrieve_topic": self.create_global_retrieve_topic_tool,
             "ranker": self.create_ranker_tool,
             "calculator": self.create_calculator_tool,
             "basic_statistics": self.create_basic_statistics_tool,
@@ -61,16 +63,19 @@ class Tools:
         
     def get_tools(self, **kwargs):
         """
-        "list_all_collections
-        "retrieve_data
-        "dense_retrieve_data
-        "ranker
-        "calculator
-        "basic_statistics
-        "insert_qa_into_db
+        list_all_collections
+        retrieve_data
+        dense_retrieve_data
+        global_retrieve_topic
+        ranker
+        calculator
+        basic_statistics
+        insert_qa_into_db
         """
         tools = []
         for tool_name, is_result in kwargs.items():
+            if tool_name not in self.tools_map:
+                raise ValueError(f"Tool '{tool_name}' does not exist.")
             if is_result:
                 tools.append(self.tools_map[tool_name](result_as_answer=True))
             else:
