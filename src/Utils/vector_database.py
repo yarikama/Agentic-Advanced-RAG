@@ -1,7 +1,8 @@
-import json, os
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
+from sklearn.cluster import MiniBatchKMeans
+from lshashpy3 import LSHash
+from collections import Counter
 from . import constants as const
 from .embedder import Embedder
 from typing import List, Dict, Any
@@ -186,68 +187,52 @@ class VectorDatabase:
         collection = self.get_collection(collection_name)
         collection.load()
         
-        embedder = Embedder()
-        test_text = embedder.embed_dense("test")
-    
-        dense_index_params = {
-            "metric_type": "COSINE",
-            # "index_type": "HNSW",
-            "params": {"M": 16, "efConstruction": 200}
-        } 
-        
-        iterator = collection.search_iterator(data = test_text,
-                                              anns_field="dense_vector",
-                                              batch_size=1000,
-                                              param=dense_index_params,
-                                              output_fields=["id","dense_vector","sparse_vector","content","metadata"],
-                                              limit=-1)
-        file_count = 0
+        iterator = collection.query_iterator(batch_size=16384,
+                                             expr="id > 0",
+                                             output_fields=["id","dense_vector","content","metadata"],)  
+
+        all_data = []
         while True:
             result = iterator.next()
             if not result:
                 iterator.close()
                 break
             
-            data = []
             for hit in result:               
                 record = {
-                    "id": hit.id,  # ID
-                    "dense_vector": hit.dense_vector,  
-                    "sparse_vector": hit.sparse_vector,  
-                    "content": hit.content,  
-                    "metadata": hit.metadata
+                    "id": hit['id'],  # ID
+                    "dense_vector": hit['dense_vector'],  
+                    # "sparse_vector": hit['sparse_vector'],  
+                    "content": hit['content'],  
+                    "metadata": hit['metadata']
                 }
-                data.append(record)
-            data_json =json.dumps(data,indent=5)
-            
-            file_name = f'../tests/{collection_name}_json/all_entities_{file_count}.json'
+                all_data.append(record)
+        df = pd.DataFrame(all_data)
         
-            with open(file_name, 'w') as f:
-                f.write(data_json)
-
-            file_count = file_count + 1
-        
-        return data
+        file_name = f'../tests/{collection_name}_all_entities.parquet'
+        df.to_parquet(file_name, index=False)
+    
+        return df
     
     def Kmeans_clustering(self, 
                           collection_name: str,
-                          k):
+                          num_k,
+                          batch_size,
+                          limit):
             
-        json_folder_path = f'../tests/{collection_name}_json'
+        file_path = f'../tests/{collection_name}_all_entities.parquet'
         #read json get vector
         vectors = []
-        for filename in os.listdir(json_folder_path):
-            if filename.endswith('.json'):
-                file_path = os.path.join(json_folder_path, filename)
-                
-                with open(file_path, 'r') as f:
-                    data = json.load(f)
-                    for item in data:
-                        vectors.append(item['dense_vector'])
+           
+        df = pd.read_parquet(file_path)
+        vector = df['dense_vector']
+        for v in vector:
+            v = v.tolist()
+            vectors.append(v)
         vectors_array = np.array(vectors)
         
         #do kmeans
-        kmeans = KMeans(n_clusters=k, random_state=0)
+        kmeans = MiniBatchKMeans(n_clusters=num_k, random_state=0, batch_size=batch_size)
         kmeans.fit(vectors_array)
         cluster_centers = kmeans.cluster_centers_
         cluster_centers = cluster_centers.tolist()
@@ -264,19 +249,116 @@ class VectorDatabase:
                 "data": data,
                 "anns_field": "dense_vector",
                 "param": {"metric_type": "COSINE", "params": {}},
-                "limit": 1
+                "limit": limit
             }
             search_req = AnnSearchRequest(**search_req)
         
             res = self.search(
                 collection_name=collection_name,
                 search_request=search_req,
-                top_k=1
+                top_k=limit
             )
             result.append(res)
             print(res)
     
         return result 
+    
+    def LSH_clustering(self,
+                       num_layers, 
+                       hash_size, 
+                       table_num, 
+                       sampling_ratio,
+                       collection_name: str,
+                       search_limit):
+        
+        collection = self.get_collection(collection_name)
+        collection.load()
+        
+        
+        file_path = f'../tests/{collection_name}_all_entities.parquet'
+        vectors = []
+        df = pd.read_parquet(file_path)
+        vector = df['dense_vector']
+        for v in vector:
+            v = v.tolist()
+            vectors.append(v)
+        vectors_array = np.array(vectors)
+        
+        # do LSH
+        def lsh_layer(vectors, current_layer):
+
+            if current_layer > num_layers:
+                return [vectors]  # break
+
+            dim = len(vectors[0])
+            lsh = LSHash(hash_size=hash_size, input_dim=dim, num_hashtables=table_num)
+            
+            # store
+            for ix, v in enumerate(vectors):
+                lsh.index(v, extra_data=str(ix))
+            
+            next_buckets = []
+            for table in lsh.hash_tables:
+                for hash_value, bucket in table.storage.items():
+                    bucket_vectors = [item[0] for item in bucket]
+                    if len(bucket_vectors) > 0:
+                        next_buckets.extend(lsh_layer(bucket_vectors, current_layer + 1))
+            return next_buckets
+
+        # start LSH
+        final_buckets = lsh_layer(vectors_array, 1)
+        
+        # last layer
+        representative_bucket_vectors = []
+        representative_vectors = []
+        for bucket in final_buckets:
+            num_vectors_to_sample = max(1, int(len(bucket) * sampling_ratio))
+            indices_to_sample = np.random.choice(len(bucket), num_vectors_to_sample, replace=False)
+            sampled_vectors = [bucket[i] for i in indices_to_sample]
+            representative_bucket_vectors.append(sampled_vectors)
+            representative_vectors.extend(sampled_vectors)
+        print(f"\n The vectors number by LSH-{num_layers} clustering : {len(representative_vectors)}")
+        print(f" The buckets number by LSH-{num_layers} clustering : {len(representative_bucket_vectors)}")
+            
+        # search result
+        result = []
+        with open('search_results.txt', 'w') as file:
+            for bucket in representative_bucket_vectors:
+                meta_data = []
+                for v in bucket:
+                    data = []
+                    v = np.array(v)
+                    data.append(v)
+                    
+                    #search center 
+                    search_req = {
+                        "data": data,
+                        "anns_field": "dense_vector",
+                        "param": {"metric_type": "COSINE","params": {"ef": 100}},
+                        "limit": search_limit
+                    }
+                    search_req = AnnSearchRequest(**search_req)
+                
+                    res = self.search(
+                        collection_name=collection_name,
+                        search_request=search_req,
+                        top_k=search_limit
+                    )
+                    result.extend(res)
+                    
+                    file.write(f"{res[0][0]['content']}\n [{res[0][0]['metadata']}]\n")
+                    
+                    meta_data.append(res[0][0]['metadata'])
+                
+                file.write("\n\n\n\n==================================================================\n\n\n\n")
+                
+                # #count meta_data num
+                # meta_data_count = Counter(meta_data)
+                # for word, count in meta_data_count.items():
+                #     print(f" {word}: {count}")
+                # print("\n\n")
+                  
+        return result, representative_vectors, representative_bucket_vectors
 
 
 if __name__ == "__main__":
