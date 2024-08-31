@@ -4,7 +4,6 @@ from sklearn.cluster import MiniBatchKMeans
 from lshashpy3 import LSHash
 from collections import Counter
 from . import constants as const
-from .embedder import Embedder
 from typing import List, Dict, Any
 from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient, AnnSearchRequest
 
