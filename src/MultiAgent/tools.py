@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, BaseModel
 from Utils import *
 from crewai_tools import BaseTool
 from typing import List, Dict, Any, Tuple
@@ -13,27 +13,22 @@ class ListAllCollectionsTool(BaseTool):
     - None required
     """
     
-    def _run(self, argument: str = "") -> List[str]:
+    def _run(self) -> List[str]:
         vecDB = VectorDatabase()
         return vecDB.list_collections()
 
 class RetrieveDataTool(BaseTool):
     name: str = "retrieve_data"
     description: str = """Retrieves data for multiple queries from specified collections in the vector database.
-    Arguments (in JSON format):
     - collection_names: List[str] - Names of collections to search in
     - queries: List[str] - List of query strings
     - top_k: int (optional) - Number of top results to retrieve for each query (default: 5)
     Example input: {"collection_names": ["col1", "col2"], "queries": ["query1", "query2"], "top_k": 3}
+    And it will return the top 3 results for each query from the specified collections and aggregate them with no duplicates.
     """
     
-    def _run(self, argument: str) -> Dict[str, Any]:
-        retriever = Retriever()  # 假设这是获取 Retriever 的方式
-        args = json.loads(argument)
-        collection_names = args['collection_names']
-        queries = args['queries']
-        top_k = args.get('top_k', const.TOP_K)
-
+    def _run(self, collection_names: List[str], queries: List[str], top_k: int) -> Dict[str, Any]:
+        retriever = Retriever()  
         content = []
         metadata = []
         seen_content = set()
@@ -57,20 +52,14 @@ class RetrieveDataTool(BaseTool):
 class DenseRetrieveDataTool(BaseTool):
     name: str = "dense_retrieve_data"
     description: str = """Retrieves data for multiple queries from specified collections in the vector database using dense retrieval.
-    Arguments (in JSON format):
     - collection_names: List[str] - Names of collections to search in
     - queries: List[str] - List of query strings
     - top_k: int (optional) - Number of top results to retrieve for each query (default: 5)
     Example input: {"collection_names": ["col1", "col2"], "queries": ["query1", "query2"], "top_k": 3}
     """
     
-    def _run(self, argument: str) -> Dict[str, Any]:
+    def _run(self, collection_names: List[str], queries: List[str], top_k: List[str]) -> Dict[str, Any]:
         retriever = Retriever()
-        args = json.loads(argument)
-        collection_names = args['collection_names']
-        queries = args['queries']
-        top_k = args.get('top_k', const.TOP_K)
-
         content = []
         metadata = []
         seen_content = set()
@@ -81,7 +70,6 @@ class DenseRetrieveDataTool(BaseTool):
                     for doc in result_list:
                         doc_content = doc.get('content', '')
                         doc_metadata = doc.get('metadata', {})
-                        
                         if doc_content not in seen_content:
                             seen_content.add(doc_content)  
                             content.append(doc_content)
@@ -94,18 +82,16 @@ class DenseRetrieveDataTool(BaseTool):
 class GlobalRetrieveTopicTool(BaseTool):
     name: str = "global_retrieve_topic"
     description: str = """Retrieves community data for a given query and level using a global retriever.
-    Arguments (in JSON format):
     - query: str - The query string to search for
-    - level: int - The level of community data to retrieve (0-3, where 0 is most general and 3 is most specific)
-    Example input: {"query": "AI ethics", "level": 2}
+    - level: int - The level of community data to retrieve (0-3, where 0 is most general least information and  and 3 is most specific and detailed)
+    Example input: ("AI ethics", 1)
+    And it will return the community data for the query "AI ethics" at level 1.
     """
 
-    def _run(self, argument: str) -> str:
+    def _run(self, query: str, level: int) -> str:
         retriever = Retriever()  
-        args = json.loads(argument)
-        query = args['query']
-        level = args['level']
-        return retriever.global_retriever(query, level)
+        return retriever.global_retrieve(query, level)
+    
 class CalculatorTool(BaseTool):
     name: str = "calculator"
     description: str = """Performs basic arithmetic calculations.
@@ -152,19 +138,12 @@ class BasicStatisticsTool(BaseTool):
 class RerankTool(BaseTool):
     name: str = "rerank"
     description: str = """Reranks the retrieved data based on relevance scores.
-    Arguments (in JSON format):
     - metadata: List[Dict[str, Any]] - List of metadata dictionaries
     - content: List[str] - List of content strings
     - relevance_scores: List[float] - List of relevance scores
     Example input: {"metadata": [{"id": 1}, {"id": 2}], "content": ["text1", "text2"], "relevance_scores": [0.9, 0.7]}
     """
-    
-    def _run(self, argument: str) -> str:
-        args = json.loads(argument)
-        metadata = args['metadata']
-        content = args['content']
-        relevance_scores = args['relevance_scores']
-
+    def _run(self, metadata: List[Dict[str, Any]], content: List[str], relevance_scores: List[float]) -> str:
         ranked_scores = sorted([(i, score) for i, score in enumerate(relevance_scores) if score > 0], key=lambda x: x[1], reverse=True)
         ranked_content = [content[i] for i, _ in ranked_scores]
         ranked_metadata = [metadata[i] for i, _ in ranked_scores]
@@ -179,27 +158,21 @@ class RerankTool(BaseTool):
 class InsertQAIntoDBTool(BaseTool):
     name: str = "insert_qa_into_db"
     description: str = """Inserts a question-answer pair into the specified collection in the vector database.
-    Arguments (in JSON format):
     - collection_name: str - Name of the collection to insert into
     - question: str - The question to be inserted
     - answer: str - The answer corresponding to the question
     Example input: {"collection_name": "my_collection", "question": "What is AI?", "answer": "Artificial Intelligence is..."}
+    And it will return "Successfully inserted Q&A pair into collection 'my_collection'."
     """
     
-    def _run(self, argument: str) -> str:
+    def _run(self, collection_name: str, question: str, answer: str) -> str:
         data_processor = DataProcessor()  # 假设这是获取 DataProcessor 的方式
-        args = json.loads(argument)
-        collection_name = args['collection_name']
-        question = args['question']
-        answer = args['answer']
-
         qa_content = f"question: {question} answer: {answer}"
         qa_metadata = {"type": "QA", "source": "user and agent"}
         qa_document = [{"content": qa_content, "metadata": qa_metadata}]
         data_processor.document_process(collection_name, qa_document, False, False)
         
         return f"Successfully inserted Q&A pair into collection '{collection_name}'."
-
 class Tools:
     def __init__(self):
         self.tools_map = {

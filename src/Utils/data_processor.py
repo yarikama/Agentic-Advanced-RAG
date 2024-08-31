@@ -228,7 +228,7 @@ class DataProcessor:
                                 ):  
         
         if is_create:
-                dense_dim = self.embedder._dense_dim
+                dense_dim = self.embedder.dense_dim
                 self.vectordatabase.create_collection(collection_name, dense_dim)
 
         def entity_generator():

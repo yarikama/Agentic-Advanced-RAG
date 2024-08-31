@@ -11,7 +11,7 @@ class NodesModularRAG():
                 rag_config: RAGConfig,
                 ):
         
-        self.rag_system = LLMMA_RAG_System(rag_config)
+        self.rag_system = MultiAgent_RAG(rag_config)
         self.rag_system.tasks.update_tasks(user_query, specific_collection)
     
     
@@ -61,7 +61,7 @@ class NodesMultiAgentRAG():
                 rag_config: RAGConfig,
                 ):
         
-        self.rag_system = LLMMA_RAG_System(rag_config)
+        self.rag_system = MultiAgent_RAG(rag_config)
         self.rag_system.tasks.update_tasks(user_query, specific_collection)
     
     def overall_node(self, state: OverallState):

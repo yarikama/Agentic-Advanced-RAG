@@ -133,14 +133,9 @@ class SubQueriesClassificationResult(BaseModel):
 TOPIC_SEARCHING_PROMPT = dedent("""
 1. Analyze the user's question and the retrieve the topic using the global_retrieve_topic tool.
     - The global_retrieve_topic tool requires the user's question and a level of community data to retrieve (0-3).
-2. Generate key points that address the user's question based on the data.
-3. For each key point:
-    - Write a comprehensive description.
+    - It will return all the community data.
+2. For each key point:
     - Assign an importance score (0-100).
-    - Create 2-3 example sentences that might appear in documents related to this key point.
-4. Format the response as a TopicSearchingResult object containing a list of TopicSearchingEntity objects.
-5. Ensure all information is supported by the provided data.
-6. If the answer is unknown or data is insufficient, create a single TopicSearchingEntity with a score of 0 and appropriate description and example sentences.
 """)
 
 TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
