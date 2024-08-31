@@ -35,18 +35,24 @@ class MultiAgent_RAG:
     
     def run_crew(self, **kwargs):
         self.crew = Crew(
-            agents=self.agents.get_agents(*kwargs["node_agents"]),
-            tasks=self.tasks.get_tasks(*kwargs["node_tasks"]),
-            process=Process.hierarchical if kwargs["node_process"] == "hierarchical" else Process.sequential,
+            agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
+            tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
+            process=Process.hierarchical if kwargs.get("node_process") == "hierarchical" else Process.sequential,
             verbose=True,
         )
-        self.crew.kickoff()
+        
+        inputs = kwargs.get("node_inputs")
+        if inputs:
+            return self.crew.kickoff(inputs=inputs)
+        else:
+            return self.crew.kickoff()
         
     def user_query_classification_run(self):
         self.run_crew(   
             node_agents=["Classifier"],
             node_tasks=["User Query Classification"],
-            node_process="sequential"
+            node_process="sequential",
+            node_inputs={"user_query": "How old is Alice?"}
         )
         return {
             "user_query_classification_result": self.tasks.create_user_query_classification_task.output.pydantic

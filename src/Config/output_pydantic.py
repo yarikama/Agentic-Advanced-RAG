@@ -29,6 +29,9 @@ class TopicSearchingEntity(BaseModel):
 class TopicSearchingResult(BaseModel):
     topics: List[TopicSearchingEntity]
             
+class TopicRerankingResult(BaseModel):
+    relevant_scores: List[int]
+            
 # For Retriever (Retrieval)
 class RetrievalResult(BaseModel):
     content: List[str]
@@ -38,7 +41,7 @@ class RetrievalResult(BaseModel):
 class RerankingResult(BaseModel):
     ranked_content: List[str]
     ranked_metadata: List[Dict[str, Any]]
-    relevance_scores: List[float]
+    relevance_scores: List[int]
     
 # For Response Auditor
 class AuditMetric(BaseModel):

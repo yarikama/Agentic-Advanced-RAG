@@ -215,7 +215,31 @@ RETRIEVAL_DETAIL_DATA_FROM_TOPIC_EXPECTED_OUTPUT = dedent("""
 A RetrievalResult pydantic object containing consolidated metadata and content lists.
 """)
 
+TOPIC_RERANKING_PROMPT = dedent("""
+You will receive batch results of communities from a graph RAG, iterated by neo4j. 
+Your task is to evaluate each community's relevance to the user's query.
 
+User Query: "{user_query}"
+
+Your specific responsibilities are:
+
+1. Examine each community from the neo4j batch results.
+2. Compare each community to the user's query.
+3. Assign a relevance score to each community based on how well it matches the user's query from 0 to 100.
+- Higher scores indicate better relevance.
+- If you are sure that a community is irrelevant, you can assign a score of 0.
+4. Create a list of these relevance scores.
+
+Important notes:
+- Ensure the order of your relevance scores matches the exact order of the communities in the input.
+- The number of scores in your output list must be identical to the number of communities in the input.
+- Maintain consistency in your scoring method across all communities.
+
+Your output should be a single list of relevance scores, ready to be used for topic reranking.
+""")
+
+TOPIC_RERANKING_EXPECTED_OUTPUT = dedent("""
+""")
 
 RERANK_PROMPT = dedent("""
 Perform a reranking process on the retrieved content based on its relevance to the user query.
@@ -223,7 +247,7 @@ Perform a reranking process on the retrieved content based on its relevance to t
 User Query: "{user_query}"
 
 You have to score each content based on its relevance to the user query.
-A relevance score should be a float value between 0 and 1, where 1 indicates high relevance and 0 indicates low relevance.
+A relevance score should be a interger between 0 and 100, more relevant content should have higher scores.
 Retrun the list of scores for each content based on their relevance to the user query.
 """)
 
@@ -232,7 +256,7 @@ Your output should be a RerankingResult object.
 class RerankingResult(BaseModel):
     ranked_content: List[str]
     ranked_metadata: List[Dict[str, Any]]
-    relevance_scores: List[float]
+    relevance_scores: List[int]
 """)
 
 GENERATION_PROMPT = dedent("""
