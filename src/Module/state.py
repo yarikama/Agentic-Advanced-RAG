@@ -11,6 +11,7 @@ class OverallState(BaseModel):
     user_query_classification_result: Optional[UserQueryClassificationResult] = None
     queries_process_result: Optional[QueriesProcessResult] = None
     sub_queries_classification_result: Optional[SubQueriesClassificationResult] = None
+    topic_searching_result: Optional[TopicSearchingResult] = None
     retrieval_result: Optional[RetrievalResult] = None
     rerank_result: Optional[RerankingResult] = None
     response_audit_result: Optional[ResponseAuditResult] = None

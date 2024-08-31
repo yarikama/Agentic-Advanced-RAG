@@ -65,7 +65,7 @@ class DenseRetrieveDataTool(BaseTool):
     """
     
     def _run(self, argument: str) -> Dict[str, Any]:
-        retriever = Retriever()  # 假设这是获取 Retriever 的方式
+        retriever = Retriever()
         args = json.loads(argument)
         collection_names = args['collection_names']
         queries = args['queries']
@@ -101,12 +101,11 @@ class GlobalRetrieveTopicTool(BaseTool):
     """
 
     def _run(self, argument: str) -> str:
-        retriever = Retriever()  # 假设这是获取 Retriever 的方式
+        retriever = Retriever()  
         args = json.loads(argument)
         query = args['query']
         level = args['level']
         return retriever.global_retriever(query, level)
-
 class CalculatorTool(BaseTool):
     name: str = "calculator"
     description: str = """Performs basic arithmetic calculations.
@@ -215,12 +214,24 @@ class Tools:
         }
 
     def get_tools(self, **kwargs):
+        """
+        options:
+            "list_all_collections": ListAllCollectionsTool,
+            "retrieve_data": RetrieveDataTool,
+            "dense_retrieve_data": DenseRetrieveDataTool,
+            "global_retrieve_topic": GlobalRetrieveTopicTool,
+            "calculator": CalculatorTool,
+            "basic_statistics": BasicStatisticsTool,
+            "rerank": RerankTool,
+            "insert_qa_into_db": InsertQAIntoDBTool,
+        """
         tools = []
         for tool_name, is_result in kwargs.items():
             if tool_name not in self.tools_map:
                 raise ValueError(f"Tool '{tool_name}' does not exist.")
+            tool_class = self.tools_map[tool_name]
             if is_result:
-                tools.append(self.tools_map[tool_name](result_as_answer=True))
+                tools.append(tool_class(result_as_answer=True))
             else:
-                tools.append(self.tools_map[tool_name])
+                tools.append(tool_class())  
         return tools

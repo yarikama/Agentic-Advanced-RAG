@@ -14,8 +14,8 @@ class Tasks:
         
     # Update the task with new query and collection
     def update_tasks(self, **kwargs):
-        self.user_query = kwargs.get("user_query", None)
-        self.specific_collection = kwargs.get("specific_collection", None)
+        self.user_query             = kwargs.get("user_query", None)
+        self.specific_collection    = kwargs.get("specific_collection", None)
         
         # Initialize the tasks
         self.create_user_query_classification_task                              = self._user_query_classification_task()
@@ -33,18 +33,18 @@ class Tasks:
         self.create_database_update_task_without_specific_collection            = self._database_update_task_without_specific_collection([self.create_response_audit_task])
         
         self.tasks_map = {
-            "User Query Classification": self.create_user_query_classification_task,
-            "Plan Coordination": self.create_plan_coordination_task,
-            "Query Process": self.create_query_process_task,
-            "Topic Searching": self.create_topic_searching_task,
-            "Sub Queries Classification w/ sc": self.create_sub_queries_classification_task_with_specific_collection,
-            "Sub Queries Classification w/o sc": self.create_sub_queries_classification_task_without_specific_collection,
-            "Retrieval": self.create_retrieval_task,
-            "Rerank": self.create_reranking_task,
-            "Generation": self.create_generation_task,
-            "Response Audit": self.create_response_audit_task,
-            "Database Update w/ sc": self.create_database_update_task_with_specific_collection,
-            "Database Update w/o sc": self.create_database_update_task_without_specific_collection,
+        "User Query Classification":                self.create_user_query_classification_task,
+            "Plan Coordination":                    self.create_plan_coordination_task,
+            "Query Process":                        self.create_query_process_task,
+            "Topic Searching":                      self.create_topic_searching_task,
+            "Sub Queries Classification w/ sc":     self.create_sub_queries_classification_task_with_specific_collection,
+            "Sub Queries Classification w/o sc":    self.create_sub_queries_classification_task_without_specific_collection,
+            "Retrieval":                            self.create_retrieval_task,
+            "Rerank":                               self.create_reranking_task,
+            "Generation":                           self.create_generation_task,
+            "Response Audit":                       self.create_response_audit_task,
+            "Database Update w/ sc":                self.create_database_update_task_with_specific_collection,
+            "Database Update w/o sc":               self.create_database_update_task_without_specific_collection,
         }
         print("User Query and Collection updated")
 
@@ -55,15 +55,21 @@ class Tasks:
             "Plan Coordination",
             "Query Process",
             "Topic Searching",
-            "Sub Queries Classification",
+            "Sub Queries Classification w/ sc",
+            "Sub Queries Classification w/o sc",
             "Retrieval",
             "Rerank",
             "Generation",
             "Response Audit",
             "Database Update",
         """
-        return [self.tasks_map[task_name] for task_name in args]
-        
+        task_list = []
+        for task_name in args:
+            if task_name not in self.tasks_map:
+                raise ValueError(f"Task {task_name} not found")
+            else:
+                task_list.append(self.tasks_map[task_name])
+        return task_list
     # Task definitions
     def _user_query_classification_task(self):
         return Task(

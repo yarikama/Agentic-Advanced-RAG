@@ -49,7 +49,7 @@ class MultiAgent_RAG:
             node_process="sequential"
         )
         return {
-            "user_query_classification": self.tasks.create_user_query_classification_task.output.pydantic
+            "user_query_classification_result": self.tasks.create_user_query_classification_task.output.pydantic
         }
     
     def plan_coordination_run(self):
@@ -59,7 +59,7 @@ class MultiAgent_RAG:
             node_process="sequential"
         )
         return {
-            "queries": self.tasks.create_plan_coordination_task.output.pydantic
+            "plan_coordination_result": self.tasks.create_plan_coordination_task.output.pydantic
         }
         
     def query_process_run(self):
@@ -69,29 +69,38 @@ class MultiAgent_RAG:
             node_process="sequential"
         )
         return {
-            "queries": self.tasks.create_query_process_task.output.pydantic
+            "queries_process_result": self.tasks.create_query_process_task.output.pydantic
         }
     
-    def sub_queries_classification_run(self):
+    def sub_queries_classification_with_specification_run(self):
         self.run_crew(   
             node_agents=["Classifier"],
-            node_tasks=["Sub Queries Classification"],
+            node_tasks=["Sub Queries Classification w/ sc"],
             node_process="sequential"
         )
         return {
-            "queries_identification_list": self.tasks.create_sub_queries_classification_task_with_specific_collection.output.pydantic
+            "sub_queries_classification_result": self.tasks.create_sub_queries_classification_task_with_specific_collection.output.pydantic
         }
         
-    def top_searching_run(self):
+    def sub_queries_classification_without_specification_run(self):
+        self.run_crew(   
+            node_agents=["Classifier"],
+            node_tasks=["Sub Queries Classification w/o sc"],
+            node_process="sequential"
+        )
+        return {
+            "sub_queries_classification_result": self.tasks.create_sub_queries_classification_task_without_specific_collection.output.pydantic
+        }
+    
+    def topic_searching_run(self):
         self.run_crew(   
             node_agents=["Topic Searcher"],
             node_tasks=["Topic Searching"],
             node_process="sequential"
         )
         return {
-            "queries": self.tasks.create_topic_searching_task.output.pydantic
+            "topic_search_result": self.tasks.create_topic_searching_task.output.pydantic
         }
-        
     
     
     # def retrieval_and_generation_run(self):

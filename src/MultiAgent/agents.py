@@ -52,6 +52,16 @@ class Agents:
         }
         
     def get_agents(self, *args):
+        """
+        Options:
+        - Classifier
+        - Plan Coordinator
+        - Query Processor
+        - Topic Searcher
+        - Retriever
+        - Reranker
+        - Generator
+        """
         agents_list = []
         for agent_name in args:
             if agent_name in self.agent_map:
