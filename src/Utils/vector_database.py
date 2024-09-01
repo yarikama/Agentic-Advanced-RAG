@@ -1,6 +1,8 @@
 import pandas as pd
 import numpy as np
+import umap.umap_ as umap
 from sklearn.cluster import MiniBatchKMeans
+from sklearn.mixture import GaussianMixture
 from lshashpy3 import LSHash
 from collections import Counter
 from . import constants as const
@@ -248,7 +250,7 @@ class VectorDatabase:
                 "data": data,
                 "anns_field": "dense_vector",
                 "param": {"metric_type": "COSINE", "params": {}},
-                "limit": limit
+                "limit": search_limit
             }
             search_req = AnnSearchRequest(**search_req)
         
@@ -337,18 +339,93 @@ class VectorDatabase:
                         "limit": search_limit
                     }
                     search_req = AnnSearchRequest(**search_req)
-                
                     res = self.search(
                         collection_name=collection_name,
                         search_request=search_req,
                         top_k=search_limit
                     )
                     result.extend(res)
-                    
-                    file.write(f"{res[0][0]['content']}\n [{res[0][0]['metadata']}]\n")
-                    
                     meta_data.append(res[0][0]['metadata'])
+    
+                    file.write(f"{res[0][0]['content']}\n [{res[0][0]['metadata']}]\n")
+                file.write("\n\n\n\n==================================================================\n\n\n\n")
                 
+                # #count meta_data num
+                # meta_data_count = Counter(meta_data)
+                # for word, count in meta_data_count.items():
+                #     print(f" {word}: {count}")
+                # print("\n\n")
+                  
+        return result, representative_vectors, representative_bucket_vectors
+    
+    def GMM_clustering(self,
+                       umap_componemts, 
+                       gmm_components, 
+                       sampling_ratio,
+                       collection_name: str,
+                       search_limit):
+        
+        collection = self.get_collection(collection_name)
+        collection.load()
+        
+        
+        file_path = f'../tests/{collection_name}_all_entities.parquet'
+        vectors = []
+        df = pd.read_parquet(file_path)
+        vector = df['dense_vector']
+        for v in vector:
+            v = v.tolist()
+            vectors.append(v)
+        vectors_array = np.array(vectors)
+        
+        # umap
+        reducer = umap.UMAP(metric='cosine',n_components=umap_componemts)
+        X_umap = reducer.fit_transform(vectors_array)
+        print(f" Umap shape: {X_umap.shape}")  
+        
+        # GMM
+        gmm = GaussianMixture(n_components=gmm_components)
+        labels = gmm.fit_predict(X_umap)
+        
+        # sample
+        representative_bucket_vectors = []
+        representative_vectors = []
+        for cluster in np.unique(labels):
+            cluster_indices = np.where(labels == cluster)[0]
+            sample_size = int(sampling_ratio * len(cluster_indices))
+            sample_indices = np.random.choice(cluster_indices, sample_size, replace=False)
+            representative_bucket_vectors.append(vectors_array[sample_indices])
+            representative_vectors.extend(vectors_array[sample_indices])
+            print(f"Cluster {cluster}: {len(sample_indices)}")
+            
+        # search result
+        result = []
+        with open('search_results.txt', 'w') as file:
+            for bucket in representative_bucket_vectors:
+                meta_data = []
+                for v in bucket:
+                    data = []
+                    v = np.array(v)
+                    data.append(v)
+                    
+                    #search center 
+                    search_req = {
+                        "data": data,
+                        "anns_field": "dense_vector",
+                        "param": {"metric_type": "COSINE","params": {"ef": 100}},
+                        "limit": search_limit
+                    }
+                    search_req = AnnSearchRequest(**search_req)
+                    res = self.search(
+                        collection_name=collection_name,
+                        search_request=search_req,
+                        top_k=search_limit
+                    )
+                    
+                    result.extend(res)
+                    meta_data.append(res[0][0]['metadata'])
+    
+                    file.write(f"{res[0][0]['content']}\n [{res[0][0]['metadata']}]\n")
                 file.write("\n\n\n\n==================================================================\n\n\n\n")
                 
                 # #count meta_data num
