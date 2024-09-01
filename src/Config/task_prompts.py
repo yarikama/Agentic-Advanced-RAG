@@ -122,7 +122,6 @@ a. Classify the query as needing retrieval or not (by judging whether the query 
 Compile a QueriesIdentification only for queries that need retrieval.
 """)                                                            
 
-
 SUB_QUERIES_CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
 Your output should be a pydantc object with the following structure:
 class SubQueriesClassificationResult(BaseModel):
@@ -130,6 +129,8 @@ class SubQueriesClassificationResult(BaseModel):
     collection_name: List[Optional[str]]
 """)
 
+
+# Topic Searching Task
 TOPIC_SEARCHING_PROMPT = dedent("""
 1. Analyze the user's question and the retrieve the topic using the global_retrieve_topic tool.
     - The global_retrieve_topic tool requires the user's question and a level of community data to retrieve (0-3).
@@ -185,7 +186,7 @@ specific_collection = {specific_collection}
 You will be given a list of TopicSearchingEntity objects. Each object has the following structure:
 class TopicSearchingEntity:
 description: str
-score: float
+score: int
 example_sentences: List[str]
 Select the topics or example sentences with high scores from the TopicSearchingEntity objects. Prioritize those with higher scores as they are likely to be more relevant.
 For each selected high-scoring topic or example sentence:
@@ -216,7 +217,8 @@ A RetrievalResult pydantic object containing consolidated metadata and content l
 """)
 
 TOPIC_RERANKING_PROMPT = dedent("""
-You will receive batch results of communities from a graph RAG, iterated by neo4j. 
+You will receive batch results of communities from a graph RAG, iterated by neo4j.
+batch_communities: "{batch_communities}" 
 Your task is to evaluate each community's relevance to the user's query.
 
 User Query: "{user_query}"
@@ -314,7 +316,7 @@ RESPONSE_AUDITOR_EXPECTED_OUTPUT = dedent("""
 Your output should be a Pydantic object of type ResponseAuditResult with the following structure:
 ResponseAuditResult(
     metrics: List[AuditMetric],
-    overall_score: float,
+    overall_score: int,
     restart_required: bool,
     additional_comments: Optional[str]
 )
@@ -322,7 +324,7 @@ ResponseAuditResult(
 Where AuditMetric is structured as:
 AuditMetric(
     name: str,
-    score: float,
+    score: int,
     comment: Optional[str]
 )
 """)

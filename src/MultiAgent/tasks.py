@@ -8,6 +8,7 @@ from Config.task_prompts import *
 # All Tasks
 class Tasks:
     def __init__(self, agents: Agents, tools: Tools):
+        # Initialize the agents and tools
         self.tools = tools
         self.agents = agents
         
@@ -18,7 +19,7 @@ class Tasks:
         self.create_sub_queries_classification_task_with_specific_collection      = self._sub_queries_classification_task_with_specific_collection([self.create_query_process_task])
         self.create_sub_queries_classification_task_without_specific_collection   = self._sub_queries_classification_task_without_specific_collection([self.create_query_process_task])
         self.create_topic_searching_task                                          = self._topic_searching_task([self.create_sub_queries_classification_task_with_specific_collection, self.create_sub_queries_classification_task_without_specific_collection])
-        self.create_topic_reranking_task                                          = self._topic_reranking_task([self.create_topic_searching_task])
+        self.create_topic_reranking_task                                          = self._topic_reranking_task()
         self.create_retrieval_task                                                = self._retrieval_task([self.create_sub_queries_classification_task_with_specific_collection, self.create_sub_queries_classification_task_without_specific_collection])
         self.create_retrieval_detail_data_from_topic_task                         = self._retrieval_detail_data_from_topic_task([self.create_topic_searching_task])
         self.create_reranking_task                                                = self._reranking_task([self.create_retrieval_task, self.create_retrieval_detail_data_from_topic_task])
@@ -27,6 +28,7 @@ class Tasks:
         self.create_database_update_task_with_specific_collection                 = self._database_update_task_with_specific_collection([self.create_response_audit_task])
         self.create_database_update_task_without_specific_collection              = self._database_update_task_without_specific_collection([self.create_response_audit_task])
         
+        # Map the tasks
         self.tasks_map = {
         "User Query Classification":                self.create_user_query_classification_task,
             "Plan Coordination":                    self.create_plan_coordination_task,
@@ -144,18 +146,16 @@ class Tasks:
             tools=self.tools.get_tools(**{"global_retrieve_topic": False}),
         )
         
-    def _topic_reranking_task(self, context_task_array: List[Task]):
+    def _topic_reranking_task(self):
         """
         Task to rerank the topics (map in Microsoft Graph RAG)
-        args: communities_from_neo4j
+        args: communities
         """
         return Task(
             agent=self.agents.create_reranker,
             description=TOPIC_RERANKING_PROMPT,
             expected_output=TOPIC_RERANKING_EXPECTED_OUTPUT,
             output_pydantic=TopicRerankingResult,
-            context=context_task_array,
-            tools=self.tools.get_tools(**{"topic_reranking": True}),
         )
 
     def _retrieval_task(self, context_task_array: List[Task]):

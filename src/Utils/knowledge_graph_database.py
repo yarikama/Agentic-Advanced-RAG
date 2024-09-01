@@ -182,6 +182,6 @@ class KnowledgeGraphDatabase:
         return self.driver.execute_query(
             cypher, 
             parameters_=params, 
-            result_transformer_= Result.to_df,
+            result_transformer_ = Result.to_df
         )
     

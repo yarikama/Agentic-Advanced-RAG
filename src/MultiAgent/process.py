@@ -4,12 +4,13 @@ from crewai import Crew, Process
 from Utils import *
 import Config.constants as const
 
-
 from .tools import Tools
 from .tasks import Tasks
 from .agents import Agents
 
 from Config.rag_config import RAGConfig
+
+import asyncio
 
 load_dotenv()
 
@@ -18,21 +19,20 @@ class MultiAgent_RAG:
         # LLM Settings
         self.model_name = rag_config.model_name if rag_config.model_name else const.MODEL_NAME
         self.model_temperature = rag_config.model_temperature if rag_config.model_temperature else const.MODEL_TEMPERATURE  
-       
+        self.user_query = rag_config.user_query if rag_config.user_query else None
+        self.specific_collection = rag_config.specific_collection if rag_config.specific_collection else None
         # Callback
         # self.callback_function = rag_config.callback_function if rag_config.callback_function else None
         
         # Tools, Agents, Tasks
         self.tools = Tools()
-        # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
         self.agents = Agents(self.model_temperature, self.model_name, self.tools)
         self.tasks = Tasks(self.agents, self.tools)
-
         print("LLMMA RAG System initialized")
         
-    def update_from_user_input(self, user_query: str, specific_collection: str):
-        self.tasks.update_tasks(user_query=user_query, specific_collection=specific_collection)
-    
+        # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
+
+                
     def run_crew(self, **kwargs):
         self.crew = Crew(
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
@@ -40,78 +40,119 @@ class MultiAgent_RAG:
             process=Process.hierarchical if kwargs.get("node_process") == "hierarchical" else Process.sequential,
             verbose=True,
         )
+        node_inputs = kwargs.get("node_inputs")
+        return self.crew.kickoff(inputs=node_inputs) if node_inputs else self.crew.kickoff()
         
-        inputs = kwargs.get("node_inputs")
-        if inputs:
-            return self.crew.kickoff(inputs=inputs)
-        else:
-            return self.crew.kickoff()
+    def run_crew_batch(self, **kwargs):
+        self.crew = Crew(
+            agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
+            tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
+            process=Process.hierarchical if kwargs.get("node_process") == "hierarchical" else Process.sequential,
+            verbose=True,
+        )
+        node_batch_inputs = kwargs.get("node_batch_inputs")
+        return self.crew.kickoff_for_each(inputs=node_batch_inputs) if node_batch_inputs else self.crew.kickoff()
+    
+    async def run_crew_batch_async(self, **kwargs):
+        self.crew = Crew(
+            agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
+            tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
+            process=Process.hierarchical if kwargs.get("node_process") == "hierarchical" else Process.sequential,
+            verbose=True,
+        )
+        node_batch_inputs = kwargs.get("node_batch_inputs")
+        return await self.crew.kickoff_for_each_async(inputs=node_batch_inputs) if node_batch_inputs else await self.crew.kickoff_async()
         
-    def user_query_classification_run(self):
+    def user_query_classification_run(self, **kwargs):
         self.run_crew(   
             node_agents=["Classifier"],
             node_tasks=["User Query Classification"],
             node_process="sequential",
-            node_inputs={"user_query": "How old is Alice?"}
+            node_inputs={"user_query": kwargs.get("user_query")}
         )
         return {
             "user_query_classification_result": self.tasks.create_user_query_classification_task.output.pydantic
         }
     
-    def plan_coordination_run(self):
+    def plan_coordination_run(self, **kwargs):
         self.run_crew(   
             node_agents=["Plan Coordinator"],
             node_tasks=["Plan Coordination"],
-            node_process="sequential"
+            node_process="sequential",
+            node_inputs={"user_query": kwargs.get("user_query")}
         )
         return {
             "plan_coordination_result": self.tasks.create_plan_coordination_task.output.pydantic
         }
         
-    def query_process_run(self):
+    def query_process_run(self, **kwargs):
         self.run_crew(   
             node_agents=["Query Processor"],
             node_tasks=["Query Process"],
-            node_process="sequential"
+            node_process="sequential",
+            node_inputs={"user_query": kwargs.get("user_query")}
         )
         return {
             "queries_process_result": self.tasks.create_query_process_task.output.pydantic
         }
     
-    def sub_queries_classification_with_specification_run(self):
+    def sub_queries_classification_with_specification_run(self, **kwargs):
         self.run_crew(   
             node_agents=["Classifier"],
             node_tasks=["Sub Queries Classification w/ sc"],
-            node_process="sequential"
+            node_process="sequential",
+            node_inputs={"specific_collection": kwargs.get("specific_collection")}
         )
         return {
             "sub_queries_classification_result": self.tasks.create_sub_queries_classification_task_with_specific_collection.output.pydantic
         }
         
-    def sub_queries_classification_without_specification_run(self):
+    def sub_queries_classification_without_specification_run(self, **kwargs):
         self.run_crew(   
             node_agents=["Classifier"],
             node_tasks=["Sub Queries Classification w/o sc"],
-            node_process="sequential"
+            node_process="sequential",
         )
         return {
             "sub_queries_classification_result": self.tasks.create_sub_queries_classification_task_without_specific_collection.output.pydantic
         }
     
-    def topic_searching_run(self):
+    def topic_searching_run(self, **kwargs):
         self.run_crew(   
             node_agents=["Topic Searcher"],
             node_tasks=["Topic Searching"],
-            node_process="sequential"
+            node_process="sequential",
+            node_inputs={"user_query": kwargs.get("user_query")} #123
         )
         return {
             "topic_search_result": self.tasks.create_topic_searching_task.output.pydantic
         }
+        
+    def topic_reranking_run_batch(self, **kwargs):
+        return self.run_crew_batch(   
+            node_agents=["Reranker"],
+            node_tasks=["Topic Reranking"],
+            node_process="sequential",
+            node_batch_inputs=kwargs.get("node_batch_inputs")
+        )
+        
+    async def topic_reranking_run_batch_async(self, **kwargs):
+        result = await self.run_crew_batch_async(   
+            node_agents=["Reranker"],
+            node_tasks=["Topic Reranking"],
+            node_process="sequential",
+            node_batch_inputs=kwargs.get("node_batch_inputs")
+        )
+        return result
+    
+    
+    
+        
+        
+        
     
     
     # def retrieval_and_generation_run(self):
-            
-
     #     # Crew with process
     #     self.crew = Crew(  
     #         agents=self.agents.get_retrieval_and_generation_node_agent(),

@@ -110,7 +110,7 @@ class Retriever:
         results = self.vectordatabase.search(collection_name, dense_search_request, top_k)
         return results
     
-    def global_retrieve(self, query: str, level: int) -> str:
+    def retrieve_all_communities(self, level: int) -> str:
         community_data = self.graphdatabase.db_query(
         """
         MATCH (c:__Community__)
