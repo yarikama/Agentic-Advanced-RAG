@@ -29,7 +29,6 @@ class MultiAgent_RAG:
         self.agents = Agents(self.model_temperature, self.model_name, self.tools)
         self.tasks = Tasks(self.agents, self.tools)
         print("LLMMA RAG System initialized")
-        
         # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
 
                 
@@ -53,7 +52,7 @@ class MultiAgent_RAG:
         node_batch_inputs = kwargs.get("node_batch_inputs")
         return self.crew.kickoff_for_each(inputs=node_batch_inputs) if node_batch_inputs else self.crew.kickoff()
     
-    async def run_crew_batch_async(self, **kwargs):
+    def run_crew_batch_async(self, **kwargs):
         self.crew = Crew(
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
@@ -61,7 +60,17 @@ class MultiAgent_RAG:
             verbose=True,
         )
         node_batch_inputs = kwargs.get("node_batch_inputs")
-        return await self.crew.kickoff_for_each_async(inputs=node_batch_inputs) if node_batch_inputs else await self.crew.kickoff_async()
+        async def run_async():
+            if node_batch_inputs:
+                return await self.crew.kickoff_for_each_async(inputs=node_batch_inputs)
+            else:
+                return await self.crew.kickoff_async()
+
+        loop = asyncio.get_event_loop()
+        if loop.is_running():
+            return asyncio.ensure_future(run_async())
+        else:
+            return loop.run_until_complete(run_async())
         
     def user_query_classification_run(self, **kwargs):
         self.run_crew(   
@@ -136,17 +145,20 @@ class MultiAgent_RAG:
             node_batch_inputs=kwargs.get("node_batch_inputs")
         )
         
-    async def topic_reranking_run_batch_async(self, **kwargs):
-        result = await self.run_crew_batch_async(   
+    def topic_reranking_run_batch_async(self, **kwargs):
+        results = self.run_crew_batch_async(   
             node_agents=["Reranker"],
             node_tasks=["Topic Reranking"],
             node_process="sequential",
             node_batch_inputs=kwargs.get("node_batch_inputs")
         )
-        return result
+        all_scores = []
+        for result in results:
+            all_scores.extend(result.pydantic.relevant_scores)
+        return all_scores
     
     
-    
+
         
         
         

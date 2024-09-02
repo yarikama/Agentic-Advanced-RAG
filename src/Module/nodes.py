@@ -4,13 +4,14 @@ from .state import OverallState, SingleState
 from Frontend import *
 from Utils import *
 from Config.rag_config import RAGConfig
+from pandas import DataFrame
 
 class NodesModularRAG():
     def __init__(self, rag_config: RAGConfig):
         self.rag_system = MultiAgent_RAG(rag_config)
         self.retriever = Retriever()
         self.global_retrive_level = 1
-        self.batch_size = 50
+        self.batch_size = 20
 
     def user_input_node(self, state: OverallState):
         state.user_query = "How old is Alice?" 
@@ -36,10 +37,12 @@ class NodesModularRAG():
     def topic_search_node(self, state: OverallState):
         # Iterate all community
         all_communities = self.retriever.retrieve_all_communities(self.global_retrive_level) 
+        all_communities = all_communities.values.tolist()
+        
                 
         # Assign the community to the agents
         batches = [{"batch_communities": all_communities[i:i + self.batch_size]} for i in range(0, len(all_communities), self.batch_size)]                    
-        self.rag_system.
+        
         # Make Summarization
    
    

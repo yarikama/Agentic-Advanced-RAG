@@ -217,8 +217,7 @@ A RetrievalResult pydantic object containing consolidated metadata and content l
 """)
 
 TOPIC_RERANKING_PROMPT = dedent("""
-You will receive batch results of communities from a graph RAG, iterated by neo4j.
-batch_communities: "{batch_communities}" 
+
 Your task is to evaluate each community's relevance to the user's query.
 
 User Query: "{user_query}"
@@ -228,19 +227,26 @@ Your specific responsibilities are:
 1. Examine each community from the neo4j batch results.
 2. Compare each community to the user's query.
 3. Assign a relevance score to each community based on how well it matches the user's query from 0 to 100.
-- Higher scores indicate better relevance.
-- If you are sure that a community is irrelevant, you can assign a score of 0.
+   - Higher scores indicate better relevance.
+   - If you are sure that a community is irrelevant, you can assign a score of 0.
 4. Create a list of these relevance scores.
 
 Important notes:
 - Ensure the order of your relevance scores matches the exact order of the communities in the input.
 - The number of scores in your output list must be identical to the number of communities in the input.
 - Maintain consistency in your scoring method across all communities.
+- Do not include any explanations or additional text outside the Pydantic object.
 
-Your output should be a single list of relevance scores, ready to be used for topic reranking.
+Your output must be a Pydantic object of the TopicRerankingResult class with the following structure:
+class TopicRerankingResult(BaseModel):
+    relevant_scores: List[int]
+    
+You will receive batch results of communities from a graph RAG, iterated by neo4j.
+batch_communities: "{batch_communities}" 
 """)
 
 TOPIC_RERANKING_EXPECTED_OUTPUT = dedent("""
+TopicRerankingResult(relevant_scores=[int, int, ...])
 """)
 
 RERANK_PROMPT = dedent("""
