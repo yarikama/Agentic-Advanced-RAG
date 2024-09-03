@@ -6,7 +6,7 @@ from Config import constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
 from .knowledge_graph_database import KnowledgeGraphDatabase
-from typing import List, Dict, Any, Union, Optional
+from typing import List, Dict, Any, Union, Optional, Set
 load_dotenv()
 
 class Retriever:
@@ -84,25 +84,46 @@ class Retriever:
         hybrid_search_requests = [dense_search_request, sparse_search_request]
         return hybrid_search_requests
 
-    def hybrid_retrieve(self, collection_name: str, query_text: str, top_k: int = const.TOP_K, alpha: float = const.ALPHA) -> List[Dict[str, Any]]:
-        # HyDE
-        hypothetical_doc = self.generate_hypothetical_document(query_text)
-        print(f"hypothetical document generated.")
-        dense_query = self.embedder.embed_dense(hypothetical_doc)
-        sparse_query = self.embedder.embed_sparse(collection_name, hypothetical_doc)
-        hybrid_search_requests_HyDE = self.hybrid_search_request(dense_query, sparse_query)
-        results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_HyDE, "weighted", [1 - alpha, alpha], max(top_k - int(top_k / 2), 1))
-        print(f"""hybrid search with HyDE (dense search weight of {1 - alpha} and sparse search weight of {alpha})""")
-        # Original
-        dense_query = self.embedder.embed_dense(query_text)
-        sparse_query = self.embedder.embed_sparse(collection_name, query_text)
-        hybrid_search_requests_origin = self.hybrid_search_request(dense_query, sparse_query)
-        # results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], top_k)
-        results.extend(self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], max(1, int(top_k / 2))))
-        print(f"""hybrid search with original (dense search weight of {1 - alpha} and sparse search weight of {alpha})""")
-        # print(f"Successfully retrieved {len(results)} results")
+    def hybrid_retrieve(self, 
+                        collection_name: str, 
+                        query_texts: List[str], 
+                        # top_k: int = const.TOP_K, 
+                        alpha: float = const.ALPHA, 
+                        isHyDE: bool = False) -> List[List[Dict[str, Any]]]:
+        all_results = []
         
-        return results
+        for query_text in query_texts:
+            results = []
+            seen_ids: Set[str] = set()
+            
+            def add_unique_results(new_results: List[Dict[str, Any]]) -> None:
+                for result in new_results:
+                    if result['id'] not in seen_ids:
+                        results.append(result)
+                        seen_ids.add(result['id'])
+            
+            if isHyDE:
+                # HyDE
+                hypothetical_doc = self.generate_hypothetical_document(query_text)
+                print(f"Hypothetical document generated for query: {query_text}")
+                dense_query = self.embedder.embed_dense(hypothetical_doc)
+                sparse_query = self.embedder.embed_sparse(collection_name, hypothetical_doc)
+                hybrid_search_requests_HyDE = self.hybrid_search_request(dense_query, sparse_query)
+                hyde_results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_HyDE, "weighted", [1 - alpha, alpha], max(top_k - int(top_k / 2), 1))
+                add_unique_results(hyde_results)
+                print(f"Hybrid search with HyDE (dense search weight of {1 - alpha} and sparse search weight of {alpha})")
+            
+            # Original query
+            dense_query = self.embedder.embed_dense(query_text)
+            sparse_query = self.embedder.embed_sparse(collection_name, query_text)
+            hybrid_search_requests_origin = self.hybrid_search_request(dense_query, sparse_query)
+            original_results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], top_k)
+            add_unique_results(original_results)
+            print(f"Hybrid search with original query (dense search weight of {1 - alpha} and sparse search weight of {alpha})")
+            
+            all_results.append(results[:top_k])  # Ensure we don't exceed top_k results
+        
+        return all_results
     
     def dense_retrieve(self, collection_name: str, query_text: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
         dense_query = self.embedder.embed_dense(query_text)

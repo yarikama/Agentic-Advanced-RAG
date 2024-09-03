@@ -8,7 +8,7 @@ from .tools import Tools
 from .tasks import Tasks
 from .agents import Agents
 
-from Config.output_pydantic import TopicRerankingResult
+from Config.output_pydantic import TopicRerankingResult, RerankingResult
 from Config.rag_config import RAGConfig
 import asyncio
 
@@ -164,7 +164,7 @@ class MultiAgent_RAG:
         all_scores = []
         for result in results:
             all_scores.extend(result.pydantic.relevance_scores)
-        return all_scores
+        return RerankingResult(relevance_scores=all_scores)
     
     def generation_run(self, **kwargs):
         self.run_crew(   

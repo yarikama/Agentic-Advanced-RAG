@@ -4,7 +4,7 @@ from .state import OverallState, SingleState
 from Frontend import *
 from Utils import *
 from Config.rag_config import RAGConfig
-from Config.output_pydantic import TopicResult 
+from Config.output_pydantic import *
 from pandas import DataFrame
 import json
 
@@ -24,18 +24,25 @@ class NodesModularRAG():
         }
     
     def user_query_classification_node(self, state: OverallState):
-        return self.rag_system.user_query_classification_run(user_query=state.user_query)
+        return {  
+            "user_query_classification_result": self.rag_system.user_query_classification_run(user_query=state.user_query)
+        } 
     
     def query_process_node(self, state: OverallState):
-        return self.rag_system.query_process_run(user_query=state.user_query)
+        return {  
+            "queries_process_result": self.rag_system.query_process_run(user_query=state.user_query)
+        } 
     
     def sub_query_classification_node(self, state: OverallState):
         if state.specific_collection is None:
-            return self.rag_system.sub_queries_classification_without_specification_run(user_query=state.user_query)
+            return {
+                "sub_queries_classification_result": self.rag_system.sub_queries_classification_without_specification_run(user_query=state.user_query)
+            }
         else:
-            return self.rag_system.sub_queries_classification_with_specification_run(user_query=state.user_query, 
-                                                                                    specific_collection=state.specific_collection)
-    
+            return {
+                "sub_queries_classification_result": self.rag_system.sub_queries_classification_with_specification_run(user_query=state.user_query, specific_collection=state.specific_collection)
+            }
+            
     def topic_search_node(self, state: OverallState):
         # Iterate all community
         all_communities = self.retriever.retrieve_all_communities(self.global_retrive_level) 
@@ -56,23 +63,28 @@ class NodesModularRAG():
             
         score_results = self.rag_system.topic_reranking_run_batch_async(node_batch_inputs=batches)
         
-        filtered_communities = [(community, score) for community, score in zip(all_communities, score_results) if score > 0]
+        filtered_communities = [(community, score) for community, score in zip(all_communities, score_results.relevant_scores) if score > 0]
         sorted_communities = sorted(filtered_communities, key=lambda x: x[1], reverse=True)
         sorted_communities_only = [community for community, _ in sorted_communities]
         
-        searching_results = self.rag_system.topic_searching_run(communitiy_information=sorted_communities_only)
+        topic_searching_results = self.rag_system.topic_searching_run(communitiy_information=sorted_communities_only)
         
         # Make Summarization and Hypothesis Answers
         return {
             "topic_result": TopicResult(
                 communities_with_scores = {f"community_{i}": score for i, (community, score) in enumerate(sorted_communities, start=1)},
-                communities_summaries = searching_results.community_summaries,
-                possible_answers = searching_results.possible_answers
+                communities_summaries = topic_searching_results.community_summaries,
+                possible_answers = topic_searching_results.possible_answers
             )
         } 
         
     def detailed_search_node(self, state: OverallState):
+        # retrieve the detailed search information from the community hypothesis answers or from the topic
+        self.retriever.hybrid_retrieve(state.specific_collection, state.user_query)
+        
         # do detailed search from the community hypothesis answers or from the topic
+
+        
         
         # rerank the retrieved data and community information
         
@@ -82,12 +94,6 @@ class NodesModularRAG():
         
         pass
     
-    def all_data_summarization_node(self, state: OverallState):
-        pass
-        
-    
-        
-        
     def retrieval_node(self, state: OverallState):
         pass
    

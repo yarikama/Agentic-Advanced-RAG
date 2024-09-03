@@ -15,7 +15,6 @@ class SubQueriesClassificationResult(BaseModel):
     queries: List[str]
     collection_name: List[Optional[str]]
 
-            
 class TopicRerankingResult(BaseModel):
     relevant_scores: List[int]
     
