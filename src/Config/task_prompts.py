@@ -52,7 +52,6 @@ PLAN_COORDINATION_EXPECTED_OUTPUT = dedent("""
 A plan outlining the major stages for your teammates to answer the user query.
 """)
 
-
 # Query Processor Task
 QUERY_PROCESS_PROMPT = dedent("""
 User query: {user_query}
@@ -74,7 +73,6 @@ Ensure that:
 - If needs_retrieval is True, provide transformed_query and optionally decomposed_queries.
 - decomposed_queries and transformed_queries, if provided, should be a list of strings, each representing a sub-query.
 """)                            
-
 
 # First Query Processor Task
 SUB_QUERIES_CLASSIFICATION_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
@@ -129,7 +127,7 @@ class SubQueriesClassificationResult(BaseModel):
     collection_name: List[Optional[str]]
 """)
 
-
+# Retrieval Task
 RETRIEVAL_PROMPT = dedent("""
 Using a SubQueriesClassificationResult object from the context, perform the retrieval process:
 
@@ -150,51 +148,11 @@ class SubQueriesClassificationResult(BaseModel):
 There is no duplicate content entries in the retrieved data.
 """)
 
-# 4. Remove irrelevant data:
-# a. For each content entry, evaluate its relevance to the original user query: {user_query}.
-# b. Remove content entries that are deemed irrelevant, along with their corresponding metadata.
-# c. If any concerns about relevance arise, don't remove the entire entry.
-
 RETRIEVAL_EXPECTED_OUTPUT = dedent("""
 A RetrievalResult pydantic object containing consolidated metadata and content lists.
 """)
 
-RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT = dedent("""
-specific_collection = {specific_collection}
-
-You will be given a list of TopicSearchingEntity objects. Each object has the following structure:
-class TopicSearchingEntity:
-description: str
-score: int
-example_sentences: List[str]
-Select the topics or example sentences with high scores from the TopicSearchingEntity objects. Prioritize those with higher scores as they are likely to be more relevant.
-For each selected high-scoring topic or example sentence:
-a. Use it as a query for the _retrieve tool.
-b. When using the _retrieve tool, include the specific_collection as a parameter.
-c. The _retrieve tool will return a dictionary with two lists:
-
-content: List[str]  # Retrieved content for each query
-metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
-
-
-After retrieving data for all selected topics/sentences:
-a. Combine all the retrieved content and metadata.
-b. Remove any duplicate content entries from the combined results.
-Organize the final set of unique, relevant content and metadata.
-Present the retrieved information in a clear, structured format, linking each piece of content to its corresponding metadata where applicable.
-
-Remember:
-
-Focus on using the most relevant topics or sentences for retrieval.
-Always use the specific_collection when calling the _retrieve tool.
-Ensure there are no duplicates in the final set of retrieved data.
-The goal is to provide comprehensive, non-redundant information related to the high-scoring topics.
-""")
-
-RETRIEVAL_DETAIL_DATA_FROM_TOPIC_EXPECTED_OUTPUT = dedent("""
-A RetrievalResult pydantic object containing consolidated metadata and content lists.
-""")
-
+# Topic Reranking Task
 TOPIC_RERANKING_PROMPT = dedent("""
 Your task is to evaluate each community's relevance to the user's query.
 User Query: "{user_query}"
@@ -225,11 +183,11 @@ class TopicRerankingResult(BaseModel):
 FINAL CHECK: Before submitting your response, be sure that the scores list contains exactly {batch_size} relevance scores.
 """)
 
-
 TOPIC_RERANKING_EXPECTED_OUTPUT = dedent("""
 TopicRerankingResult(relevant_scores=[int, int, ...])
 """)
 
+# Topic Searching Task
 TOPIC_SEARCHING_PROMPT = dedent("""
 You have received multiple pieces of community information related to a user query by descending relevance scores.
 
@@ -275,6 +233,44 @@ TopicSearchingResult(
 )
 """)
 
+# Retrieve Detail Data from Topic Task
+RETRIEVAL_DETAIL_DATA_FROM_TOPIC_PROMPT = dedent("""
+specific_collection = {specific_collection}
+
+You will be given a list of TopicSearchingEntity objects. Each object has the following structure:
+class TopicSearchingEntity:
+description: str
+score: int
+example_sentences: List[str]
+Select the topics or example sentences with high scores from the TopicSearchingEntity objects. Prioritize those with higher scores as they are likely to be more relevant.
+For each selected high-scoring topic or example sentence:
+a. Use it as a query for the _retrieve tool.
+b. When using the _retrieve tool, include the specific_collection as a parameter.
+c. The _retrieve tool will return a dictionary with two lists:
+
+content: List[str]  # Retrieved content for each query
+metadata: List[Dict[str, Any]]  # Retrieved metadata for each query
+
+
+After retrieving data for all selected topics/sentences:
+a. Combine all the retrieved content and metadata.
+b. Remove any duplicate content entries from the combined results.
+Organize the final set of unique, relevant content and metadata.
+Present the retrieved information in a clear, structured format, linking each piece of content to its corresponding metadata where applicable.
+
+Remember:
+
+Focus on using the most relevant topics or sentences for retrieval.
+Always use the specific_collection when calling the _retrieve tool.
+Ensure there are no duplicates in the final set of retrieved data.
+The goal is to provide comprehensive, non-redundant information related to the high-scoring topics.
+""")
+
+RETRIEVAL_DETAIL_DATA_FROM_TOPIC_EXPECTED_OUTPUT = dedent("""
+A RetrievalResult pydantic object containing consolidated metadata and content lists.
+""")
+
+# Reranking Detail Data Task
 RERANKING_PROMPT = dedent("""
 Your task is to evaluate each retrieved data item's relevance to the user's query.
 User Query: "{user_query}"
@@ -310,10 +306,11 @@ class RerankingResult(BaseModel):
     relevance_scores: List[int]
 """)
 
+# Information Organization Task
 INFORMATION_ORGANIZATION_PROMPT = dedent("""
 Input:
 1. Retrieved Data: {retrieved_data}
-2. Community Information: {community_info}
+2. Community Information: {community_information}
 3. User Query: {user_query}
 
 Your tasks:
@@ -346,6 +343,7 @@ Your output should be a single string containing:
 This output will serve as an organized, faithful representation of the original data for subsequent processing and response generation.
 """)                    
 
+# Response Generation Task
 GENERATION_PROMPT = dedent("""
 Analyze the reranked data and formulate a comprehensive answer to the user's query.
 
@@ -368,6 +366,8 @@ GENERATION_EXPECTED_OUTPUT = dedent("""
 "A comprehensive analysis answering the user's original query based on all the provided data from sub-queries."
 """)
 
+
+# Response Auditor Task
 RESPONSE_AUDITOR_PROMPT = dedent("""
 Review the summary provided in the context and evaluate if it adequately addresses the user's query and meets the RAGAS evaluation criteria.
 
@@ -413,6 +413,7 @@ AuditMetric(
 )
 """)
 
+# Database Updater Task
 DATABASE_UPDATER_PROMPT_WITHOUT_SPECIFIC_COLLECTION = dedent("""
 Store the user query and summary response in the database if approved by the Response Auditor.
 

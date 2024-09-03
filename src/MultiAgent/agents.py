@@ -246,6 +246,24 @@ class Agents:
 #             callbacks=[self.callback_function],
         )
 
+    def _information_organizer(self):
+        return Agent(
+            role='Information Organizer',
+            goal="""Your task is to structure and consolidate the retrieved data and community information, preserving the original tone and avoiding any fabrication. Your organized output will serve as a foundation for subsequent response generation by other agents.""",
+            backstory="""
+            You are an AI expert in information organization, with a talent for structuring and consolidating data.
+            You excel at distilling complex data into clear, concise summaries based on user queries.
+            Your unique ability to identify key concepts and connect diverse information has aided numerous breakthroughs across various fields.
+            You approach each task eagerly, seeing it as a chance to uncover and present crucial insights that empower decision-makers and innovators.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            cache=True,
+            allow_delegation=False,
+    #         callbacks=[self.callback_function],   
+        )
+
     def _generator(self):
         return Agent(
             role='Generator',
@@ -300,22 +318,5 @@ class Agents:
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
-            
-    def _information_organizer(self):
-        return Agent(
-            role='Information Organizer',
-            goal="""Your task is to structure and consolidate the retrieved data and community information, preserving the original tone and avoiding any fabrication. Your organized output will serve as a foundation for subsequent response generation by other agents.""",
-            backstory="""
-            You are an AI expert in information organization, with a talent for structuring and consolidating data.
-            You excel at distilling complex data into clear, concise summaries based on user queries.
-            Your unique ability to identify key concepts and connect diverse information has aided numerous breakthroughs across various fields.
-            You approach each task eagerly, seeing it as a chance to uncover and present crucial insights that empower decision-makers and innovators.
-            """,
-            verbose=True,
-            llm=self.llm,
-            memory=True,
-            cache=True,
-            allow_delegation=False,
-    #         callbacks=[self.callback_function],   
-        )
+        
     

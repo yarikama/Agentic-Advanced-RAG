@@ -24,7 +24,7 @@ class Tasks:
         self.create_retrieval_detail_data_from_topic_task                         = self._retrieval_detail_data_from_topic_task([self.create_topic_searching_task])
         self.create_reranking_task                                                = self._reranking_task([self.create_retrieval_task, self.create_retrieval_detail_data_from_topic_task])
         self.create_information_organization_task                                 = self._information_organization_task()
-        self.create_generation_task                                               = self._generation_task([self.create_reranking_task])
+        self.create_generation_task                                               = self._generation_task([self.create_information_organization_task])
         self.create_response_audit_task                                           = self._response_audit_task([self.create_generation_task])
         self.create_database_update_task_with_specific_collection                 = self._database_update_task_with_specific_collection([self.create_response_audit_task])
         self.create_database_update_task_without_specific_collection              = self._database_update_task_without_specific_collection([self.create_response_audit_task])
@@ -39,6 +39,7 @@ class Tasks:
             "Sub Queries Classification w/ sc":     self.create_sub_queries_classification_task_with_specific_collection,
             "Sub Queries Classification w/o sc":    self.create_sub_queries_classification_task_without_specific_collection,
             "Retrieval":                            self.create_retrieval_task,
+            "Retrieval Detail Data From Topic":     self.create_retrieval_detail_data_from_topic_task,
             "Rerank":                               self.create_reranking_task,
             "Information Organization":             self.create_information_organization_task,
             "Generation":                           self.create_generation_task,
