@@ -13,8 +13,8 @@ class Retriever:
     def __init__(self, 
                 vectordatabase: Optional[VectorDatabase] = None,
                 graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
-                embedder: Optional[Embedder] = None,
-                ):
+                embedder: Optional[Embedder] = None,):
+        
         self.embedder = embedder if embedder else Embedder()
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
         self.graphdatabase = graphdatabase if graphdatabase else KnowledgeGraphDatabase()
@@ -32,7 +32,10 @@ class Retriever:
         )
         return response.choices[0].message.content
     
-    def dense_search_request(self, dense_query_vectors: Union[List[float], List[List[float]]], field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+    def dense_search_request(self, 
+                            dense_query_vectors: Union[List[float], List[List[float]]], 
+                            field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+        
         if const.IS_GPU_INDEX:
             dense_search_param = {
                 "data": dense_query_vectors,
@@ -63,7 +66,9 @@ class Retriever:
         dense_search_request = AnnSearchRequest(**dense_search_param)
         return dense_search_request 
 
-    def sparse_search_request(self, sparse_query_vectors: Union[List[float], List[List[float]]], field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+    def sparse_search_request(self, 
+                              sparse_query_vectors: Union[List[float], List[List[float]]], 
+                              field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
         
         sparse_search_param = {
             "data": sparse_query_vectors,
@@ -90,40 +95,33 @@ class Retriever:
                         top_k: int = const.TOP_K, 
                         alpha: float = const.ALPHA, 
                         isHyDE: bool = False) -> List[List[Dict[str, Any]]]:
-        all_results = []
+        """
+        this is for similar multiple queries searching, the result is a deduplicated list of documents
+        """
+        dense_queries = self.embedder.embed_dense(query_texts)
+        sparse_queries = self.embedder.embed_sparse(collection_name, query_texts)
         
-        for query_text in query_texts:
-            results = []
-            seen_ids: Set[str] = set()
-            
-            def add_unique_results(new_results: List[Dict[str, Any]]) -> None:
-                for result in new_results:
-                    if result['id'] not in seen_ids:
-                        results.append(result)
-                        seen_ids.add(result['id'])
-            
-            if isHyDE:
-                # HyDE
-                hypothetical_doc = self.generate_hypothetical_document(query_text)
-                print(f"Hypothetical document generated for query: {query_text}")
-                dense_query = self.embedder.embed_dense(hypothetical_doc)
-                sparse_query = self.embedder.embed_sparse(collection_name, hypothetical_doc)
-                hybrid_search_requests_HyDE = self.hybrid_search_request(dense_query, sparse_query)
-                hyde_results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_HyDE, "weighted", [1 - alpha, alpha], max(top_k - int(top_k / 2), 1))
-                add_unique_results(hyde_results)
-                print(f"Hybrid search with HyDE (dense search weight of {1 - alpha} and sparse search weight of {alpha})")
-            
-            # Original query
-            dense_query = self.embedder.embed_dense(query_text)
-            sparse_query = self.embedder.embed_sparse(collection_name, query_text)
-            hybrid_search_requests_origin = self.hybrid_search_request(dense_query, sparse_query)
-            original_results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests_origin, "weighted", [1 - alpha, alpha], top_k)
-            add_unique_results(original_results)
-            print(f"Hybrid search with original query (dense search weight of {1 - alpha} and sparse search weight of {alpha})")
-            
-            all_results.append(results[:top_k])  # Ensure we don't exceed top_k results
+        if isHyDE:
+            hypothetical_docs = [self.generate_hypothetical_document(query) for query in query_texts]
+            hyde_dense_queries = self.embedder.embed_dense(hypothetical_docs)
+            hyde_sparse_queries = self.embedder.embed_sparse(collection_name, hypothetical_docs)            
+            dense_queries = hyde_dense_queries + dense_queries
+            sparse_queries = hyde_sparse_queries + sparse_queries
         
-        return all_results
+        hybrid_search_requests = self.hybrid_search_request(dense_queries, sparse_queries)        
+        batch_results = self.vectordatabase.hybrid_search(collection_name, hybrid_search_requests, "weighted", [1 - alpha, alpha], top_k * len(query_texts))
+        
+        seen_contents = set()
+        unique_results = []
+        
+        for query_results in batch_results:
+            for result in query_results:
+                content = result['content']
+                if content not in seen_contents:
+                    seen_contents.add(content)
+                    unique_results.append(result)
+        
+        return unique_results 
     
     def dense_retrieve(self, collection_name: str, query_text: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
         dense_query = self.embedder.embed_dense(query_text)
