@@ -87,7 +87,7 @@ class Retriever:
     def hybrid_retrieve(self, 
                         collection_name: str, 
                         query_texts: List[str], 
-                        # top_k: int = const.TOP_K, 
+                        top_k: int = const.TOP_K, 
                         alpha: float = const.ALPHA, 
                         isHyDE: bool = False) -> List[List[Dict[str, Any]]]:
         all_results = []
