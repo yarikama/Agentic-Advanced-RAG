@@ -15,21 +15,19 @@ class SubQueriesClassificationResult(BaseModel):
     queries: List[str]
     collection_name: List[Optional[str]]
 
-class TopicSearchingEntity(BaseModel):
-    description: str
-    score: int
-    example_sentence: str
-    
-class TopicSearchingResult(BaseModel):
-    topics: List[TopicSearchingEntity]
             
 class TopicRerankingResult(BaseModel):
     relevant_scores: List[int]
     
-class SortedTopicRerankingResult(BaseModel):
-    ranked_topics: List[TopicSearchingEntity]
-    relevance_scores: List[int]
+class TopicSearchingResult(BaseModel):
+    community_summaries: List[str]
+    possible_answers: List[str]
             
+class TopicResult(BaseModel):
+    communities_with_scores : Dict[str, int]
+    communities_summaries: List[str]
+    possible_answers: List[str]
+                
 class RetrievalResult(BaseModel):
     content: List[str]
     metadata: List[Dict[str, Any]]

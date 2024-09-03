@@ -4,14 +4,16 @@ from .state import OverallState, SingleState
 from Frontend import *
 from Utils import *
 from Config.rag_config import RAGConfig
+from Config.output_pydantic import TopicResult 
 from pandas import DataFrame
+import json
 
 class NodesModularRAG():
     def __init__(self, rag_config: RAGConfig):
         self.rag_system = MultiAgent_RAG(rag_config)
         self.retriever = Retriever()
         self.global_retrive_level = 1
-        self.batch_size = 20
+        self.batch_size = 5
 
     def user_input_node(self, state: OverallState):
         state.user_query = "How old is Alice?" 
@@ -41,15 +43,54 @@ class NodesModularRAG():
         
                 
         # Assign the community to the agents
-        batches = [{"batch_communities": all_communities[i:i + self.batch_size]} for i in range(0, len(all_communities), self.batch_size)]                    
+        batches = []
+        for i in range(0, len(all_communities), self.batch_size):
+            batch_communities = {f"community_{j}": community 
+                                for j, community in enumerate(all_communities[i:i + self.batch_size], start=i)}
+            batch_json = json.dumps(batch_communities, ensure_ascii=False)
+            batches.append({
+                "batch_communities": batch_json,
+                "user_query": state.user_query,
+                "batch_size": len(batch_communities)
+            })
+            
+        score_results = self.rag_system.topic_reranking_run_batch_async(node_batch_inputs=batches)
         
-        # Make Summarization
-   
-   
-   
-    def retrieval_node(self, state: OverallState):
+        filtered_communities = [(community, score) for community, score in zip(all_communities, score_results) if score > 0]
+        sorted_communities = sorted(filtered_communities, key=lambda x: x[1], reverse=True)
+        sorted_communities_only = [community for community, _ in sorted_communities]
+        
+        searching_results = self.rag_system.topic_searching_run(communitiy_information=sorted_communities_only)
+        
+        # Make Summarization and Hypothesis Answers
+        return {
+            "topic_result": TopicResult(
+                communities_with_scores = {f"community_{i}": score for i, (community, score) in enumerate(sorted_communities, start=1)},
+                communities_summaries = searching_results.community_summaries,
+                possible_answers = searching_results.possible_answers
+            )
+        } 
+        
+    def detailed_search_node(self, state: OverallState):
+        # do detailed search from the community hypothesis answers or from the topic
+        
+        # rerank the retrieved data and community information
+        
+        # aggregate the data retrieved and the community information by function instead of by LLM
+        
+        # summarize all the data information for generating the final response 
+        
         pass
     
+    def all_data_summarization_node(self, state: OverallState):
+        pass
+        
+    
+        
+        
+    def retrieval_node(self, state: OverallState):
+        pass
+   
     def rerank_node(self, state: OverallState):
         pass
          

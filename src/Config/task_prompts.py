@@ -130,27 +130,6 @@ class SubQueriesClassificationResult(BaseModel):
 """)
 
 
-# Topic Searching Task
-TOPIC_SEARCHING_PROMPT = dedent("""
-1. Analyze the user's question and the retrieve the topic using the global_retrieve_topic tool.
-    - The global_retrieve_topic tool requires the user's question and a level of community data to retrieve (0-3).
-    - It will return all the community data.
-2. For each key point:
-    - Assign an importance score (0-100).
-""")
-
-TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
-The response should be formatted as a Pydantic object with the following structure:
-
-class TopicSearchingEntity(BaseModel):
-    description: str
-    score: int
-    example_sentence: List[str]
-
-class TopicSearchingResult(BaseModel):
-    topics: List[TopicSearchingEntity]
-""")
-
 RETRIEVAL_PROMPT = dedent("""
 Using a SubQueriesClassificationResult object from the context, perform the retrieval process:
 
@@ -217,55 +196,155 @@ A RetrievalResult pydantic object containing consolidated metadata and content l
 """)
 
 TOPIC_RERANKING_PROMPT = dedent("""
-
 Your task is to evaluate each community's relevance to the user's query.
-
 User Query: "{user_query}"
 
 Your specific responsibilities are:
-
-1. Examine each community from the neo4j batch results.
+1. Examine each community from the batch.
 2. Compare each community to the user's query.
 3. Assign a relevance score to each community based on how well it matches the user's query from 0 to 100.
    - Higher scores indicate better relevance.
-   - If you are sure that a community is irrelevant, you can assign a score of 0.
-4. Create a list of these relevance scores.
+   - If the community is totally irrelevant, assign a score of 0.
+4. Create a list of these relevance scores, don't include any other information.
+5. CRITICAL: Ensure the number of scores in your output list EXACTLY matches the number of communities :{batch_size} in the input.
+
+You will receive a batch of {batch_size} communities in json format. 
+----------------batch_communities----------------
+{batch_communities}
 
 Important notes:
-- Ensure the order of your relevance scores matches the exact order of the communities in the input.
-- The number of scores in your output list must be identical to the number of communities in the input.
+- The order of your relevance scores must match the exact order of the communities in the input.
 - Maintain consistency in your scoring method across all communities.
 - Do not include any explanations or additional text outside the Pydantic object.
+- If you find that your score list does not match the number of communities : {batch_size}, you MUST redo the entire process until it does.
 
 Your output must be a Pydantic object of the TopicRerankingResult class with the following structure:
 class TopicRerankingResult(BaseModel):
     relevant_scores: List[int]
-    
-You will receive batch results of communities from a graph RAG, iterated by neo4j.
-batch_communities: "{batch_communities}" 
+
+FINAL CHECK: Before submitting your response, be sure that the scores list contains exactly {batch_size} relevance scores.
 """)
+
 
 TOPIC_RERANKING_EXPECTED_OUTPUT = dedent("""
 TopicRerankingResult(relevant_scores=[int, int, ...])
 """)
 
-RERANK_PROMPT = dedent("""
-Perform a reranking process on the retrieved content based on its relevance to the user query.
+TOPIC_SEARCHING_PROMPT = dedent("""
+You have received multiple pieces of community information related to a user query by descending relevance scores.
 
+----------------Uesr Query----------------
+{user_query}
+
+Your task is to analyze this information and help prepare for a vector database search to answer the user's query.
+
+Follow these steps:
+1. Carefully read and analyze all provided community information.
+2. Summarize the key points from this information and from the user query into concise community summaries.
+3. Based on these summaries, imagine what relevant document chunks might exist in a vector database or what might the response contain.
+4. Generate possible document chunks that could help answer the user's query.
+
+Your output should be a Pydantic model instance of TopicSearchingResult, containing:
+1. community_summaries: A list of strings summarizing key points from the community information.
+2. possible_document_chunks: A list of strings representing imagined document chunks that might exist in the vector database.
+
+Guidelines:
+- Each community summary should capture a distinct key point or theme from the provided information.
+- Imagined document chunks should be diverse and cover various aspects related to the user's query.
+- These chunks should be formulated to aid in semantic search within a vector database.
+- Each chunk should be a short paragraph or a few sentences, similar to what might be found in a real document.
+
+Remember, the goal is to create summaries and imagine document chunks that will help in retrieving relevant information from a vector database to answer the user's query.
+
+----------------Community Information----------------
+{community_information}
+""")
+
+TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
+TopicSearchingResult(
+    community_summaries=[
+        "Key point 1 summarized from community information",
+        "Key point 2 summarized from community information",
+        "Key point 3 summarized from community information"
+    ],
+    possible_document_chunks=[
+        "An imagined document chunk that might exist in the vector database, relevant to the user's query and community summaries.",
+        "Another potential document chunk covering a different aspect of the topic, formulated to aid in semantic search.",
+        "A third imagined document chunk providing additional context or information related to the user's query."
+    ]
+)
+""")
+
+RERANKING_PROMPT = dedent("""
+Your task is to evaluate each retrieved data item's relevance to the user's query.
 User Query: "{user_query}"
 
-You have to score each content based on its relevance to the user query.
-A relevance score should be a interger between 0 and 100, more relevant content should have higher scores.
-Retrun the list of scores for each content based on their relevance to the user query.
+Your specific responsibilities are:
+1. Examine each data item from the batch.
+2. Compare each data item to the user's query.
+3. Assign a relevance score to each data item based on how well it matches the user's query from 0 to 100.
+   - Higher scores indicate better relevance.
+4. Create a list of these relevance scores, don't include any other information.
+5. CRITICAL: Ensure the number of scores in your output list EXACTLY matches the number of data items :{batch_size} in the input.
+
+You will receive a batch of {batch_size} data items in json format. 
+----------------batch_retrieved_data----------------
+{batch_retrieved_data}
+
+Important notes:
+- The order of your relevance scores must match the exact order of the data items in the input.
+- Maintain consistency in your scoring method across all data items.
+- Do not include any explanations or additional text outside the Pydantic object.
+- If you find that your score list does not match the number of data items : {batch_size}, you MUST redo the entire process until it does.
+
+Your output must be a Pydantic object of the TopicRerankingResult class with the following structure:
+class RerankingResult(BaseModel):
+    relevant_scores: List[int]
+
+FINAL CHECK: Before submitting your response, be sure that the scores list contains exactly {batch_size} relevance scores.
 """)
 
-RERANK_EXPECTED_OUTPUT = dedent("""
+RERANKING_EXPECTED_OUTPUT = dedent("""
 Your output should be a RerankingResult object.
 class RerankingResult(BaseModel):
-    ranked_content: List[str]
-    ranked_metadata: List[Dict[str, Any]]
     relevance_scores: List[int]
 """)
+
+INFORMATION_ORGANIZATION_PROMPT = dedent("""
+Input:
+1. Retrieved Data: {retrieved_data}
+2. Community Information: {community_info}
+3. User Query: {user_query}
+
+Your tasks:
+1. Carefully review and categorize the retrieved data and community information.
+2. Organize the information into coherent themes or topics, even if the original data is fragmented.
+3. Preserve the original language, especially modal verbs like "shall", "may", "must", etc., that indicate levels of certainty or possibility.
+4. Identify and highlight any connections or contradictions between different pieces of information.
+5. Structure the data in a way that facilitates easy understanding and future use, without losing important details or nuances.
+6. Include relevant metadata, organizing it alongside the corresponding information.
+7. Clearly indicate areas where information is lacking or insufficient.
+
+Guidelines:
+- Maintain the integrity of the original information. Do not add, infer, or fabricate any information not present in the original data.
+- Use direct quotes where appropriate to preserve exact phrasing, especially for key points or when modal verbs are used.
+- If information seems contradictory or inconsistent, note this without attempting to resolve the contradiction.
+- Highlight gaps in the information or areas where data is insufficient.
+- Maintain objectivity and avoid interpreting or drawing conclusions from the data.
+- If there's not enough information on a particular aspect, clearly state this rather than making assumptions.
+
+""")
+
+INFORMATION_ORGANIZATION_EXPECTED_OUTPUT = dedent("""
+Your output should be a single string containing:
+1. A well-structured organization of the information, grouped by themes or topics.
+2. Direct quotes and preserved modal verbs where relevant.
+3. Noted connections, contradictions, or gaps in the information.
+4. Relevant metadata integrated alongside the corresponding information.
+5. Clear indications of areas where information is lacking or insufficient.
+
+This output will serve as an organized, faithful representation of the original data for subsequent processing and response generation.
+""")                    
 
 GENERATION_PROMPT = dedent("""
 Analyze the reranked data and formulate a comprehensive answer to the user's query.
@@ -274,14 +353,13 @@ Original user query: {user_query}
 
 Your task:
 1. Review the original user query.
-2. Carefully examine the ranked data provided by the Reranker for each sub-query.
+2. Carefully examine the data provided by the information organizer for each sub-query.
 3. Synthesize all the information to form a coherent and comprehensive answer that addresses the original user query.
 4. Ensure that your response covers all aspects of the user's query and the derived sub-queries.
 5. Identify key findings, insights, and connections across all the data.
 6. Provide a detailed analysis, breaking down the answer into relevant topics or aspects.
 7. Assess the confidence level of your analysis based on the available data.
 8. Identify any limitations in the data or analysis.
-9. If applicable, suggest potential follow-up questions or areas for further investigation.
 
 Your output should be a comprehensive analysis that ties together all the information from the sub-queries to directly address the original user query.
 """)

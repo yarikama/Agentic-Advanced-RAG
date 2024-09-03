@@ -35,6 +35,7 @@ class Agents:
         self.create_topic_searcher = self._topic_searcher()
         self.create_retriever = self._retriever()
         self.create_reranker = self._reranker()
+        self.create_information_organizer = self._information_organizer()
         self.create_generator = self._generator()
         self.create_response_auditor = self._response_auditor()
         self.create_database_updater = self._database_updater()
@@ -46,6 +47,7 @@ class Agents:
             "Topic Searcher": self.create_topic_searcher,
             "Retriever": self.create_retriever,
             "Reranker": self.create_reranker,
+            "Information Organizer": self.create_information_organizer,
             "Generator": self.create_generator,
             "Response Auditor": self.create_response_auditor,
             "Database Updater": self.create_database_updater,
@@ -58,6 +60,7 @@ class Agents:
         - Plan Coordinator
         - Query Processor
         - Topic Searcher
+        - Information Organizer
         - Retriever
         - Reranker
         - Generator
@@ -188,15 +191,10 @@ class Agents:
         return Agent(
             role='Topic Searcher',
             goal="""
-            Generate a response consisting of a list of key points that responds to the user's question, summarizing all relevant information in the input data tables.
-
-            You should use the data provided in the data tables below as the primary context for generating the response.
-            If you don't know the answer or if the input data tables do not contain sufficient information to provide an answer, just say so. Do not make anything up.
-
-            Each key point in the response should have the following elements:
-            a) Description: A comprehensive description of the point.
-            b) Importance Score: An integer score between 0-100 that indicates how important the point is in answering the user's question. An 'I don't know' type of response should have a score of 0.
-            c) Example Sentences: A list of imagined sentences that might appear in documents related to this key point, to aid in semantic search.
+            Receive community information related to the user_query, sorted in descending order of relevance.
+            Analyze and synthesize this information to formulate potential answers that could help address the user_query.
+            Generate a summary of key points derived from the provided community data.
+            If the provided community information is insufficient to generate meaningful key points or potential answers, clearly state this limitation.
             """,
             backstory="""
             You are a seasoned librarian with a talent for organizing and categorizing information. 
@@ -302,3 +300,22 @@ class Agents:
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
+            
+    def _information_organizer(self):
+        return Agent(
+            role='Information Organizer',
+            goal="""Your task is to structure and consolidate the retrieved data and community information, preserving the original tone and avoiding any fabrication. Your organized output will serve as a foundation for subsequent response generation by other agents.""",
+            backstory="""
+            You are an AI expert in information organization, with a talent for structuring and consolidating data.
+            You excel at distilling complex data into clear, concise summaries based on user queries.
+            Your unique ability to identify key concepts and connect diverse information has aided numerous breakthroughs across various fields.
+            You approach each task eagerly, seeing it as a chance to uncover and present crucial insights that empower decision-makers and innovators.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            cache=True,
+            allow_delegation=False,
+    #         callbacks=[self.callback_function],   
+        )
+    

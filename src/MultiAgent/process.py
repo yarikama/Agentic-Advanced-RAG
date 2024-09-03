@@ -9,11 +9,9 @@ from .tasks import Tasks
 from .agents import Agents
 
 from Config.rag_config import RAGConfig
-
 import asyncio
 
 load_dotenv()
-
 class MultiAgent_RAG:
     def __init__(self, rag_config: RAGConfig = RAGConfig()):
         # LLM Settings
@@ -125,17 +123,6 @@ class MultiAgent_RAG:
         return {
             "sub_queries_classification_result": self.tasks.create_sub_queries_classification_task_without_specific_collection.output.pydantic
         }
-    
-    def topic_searching_run(self, **kwargs):
-        self.run_crew(   
-            node_agents=["Topic Searcher"],
-            node_tasks=["Topic Searching"],
-            node_process="sequential",
-            node_inputs={"user_query": kwargs.get("user_query")} #123
-        )
-        return {
-            "topic_search_result": self.tasks.create_topic_searching_task.output.pydantic
-        }
         
     def topic_reranking_run_batch(self, **kwargs):
         return self.run_crew_batch(   
@@ -156,6 +143,47 @@ class MultiAgent_RAG:
         for result in results:
             all_scores.extend(result.pydantic.relevant_scores)
         return all_scores
+    
+    def topic_searching_run(self, **kwargs):
+        self.run_crew(   
+            node_agents=["Topic Searcher"],
+            node_tasks=["Topic Searching"],
+            node_process="sequential",
+            node_inputs={"user_query": kwargs.get("user_query"), 
+                        "community_information": kwargs.get("community_information")}
+        )
+        return {
+            "topic_search_result": self.tasks.create_topic_searching_task.output.pydantic
+        }
+        
+    def retrieval_run(self, **kwargs):
+        pass
+    
+    def reranking_run_batch_async(self, **kwargs):
+        results = self.run_crew_batch_async(   
+            node_agents=["Reranker"],
+            node_tasks=["Reranking"],
+            node_process="sequential",
+            node_batch_inputs=kwargs.get("node_batch_inputs")
+        )
+        all_scores = []
+        for result in results:
+            all_scores.extend(result.pydantic.relevance_scores)
+        return all_scores
+    
+    def information_organization_run(self, **kwargs):
+        self.run_crew(   
+            node_agents=["Information Organizer"],
+            node_tasks=["Information Organization"],
+            node_process="sequential",
+            node_inputs={"ranked_retrieval_data": kwargs.get("ranked_retrieval_data")}
+        )
+        return {
+            "information_organization_result": self.tasks.create_information_organization_task.output.pydantic
+        }
+    
+    
+    
     
     
 
