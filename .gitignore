@@ -6,4 +6,8 @@ volumes/
 .graph_rag/
 .tmp/
 .env
-graph_rag/
+graph_rag/*
+!graph_rag/settings.yaml
+!graph_rag/prompts/
+!graph_rag/input
+!graph_rag/20240825-164936/artifacts
