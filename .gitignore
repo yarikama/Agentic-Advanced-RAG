@@ -1,5 +1,9 @@
 __pycache__/
+.parquet/
 volumes/
 .corpus/
 .data/
+.graph_rag/
+.tmp/
 .env
+graph_rag/

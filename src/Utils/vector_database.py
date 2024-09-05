@@ -1,12 +1,11 @@
 import pandas as pd
-import os
+from Config import constants as const
 import numpy as np
 import umap.umap_ as umap
 from sklearn.cluster import MiniBatchKMeans, DBSCAN
 from sklearn.mixture import GaussianMixture
 from lshashpy3 import LSHash
 from collections import Counter
-from . import constants as const
 from typing import List, Dict, Any
 from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient, AnnSearchRequest
 
@@ -46,7 +45,7 @@ class VectorDatabase:
 
     def create_collection(self, 
                         collection_name: str, 
-                        dense_dim: int = const.EMBEDDING_DENSE_DIM
+                        dense_dim: int = const.EMBEDDING_DENSE_DIM,
                         ):
 
         if self.client.has_collection(collection_name):
@@ -74,11 +73,22 @@ class VectorDatabase:
         
         print(f"Successfully created collection {collection_name} with dense dimension {dense_dim} and sparse embeddings.")
 
-        dense_index_params = {
-            "metric_type": "COSINE",
-            "index_type": "HNSW",
-            "params": {"M": 16, "efConstruction": 200}
-        } 
+        if const.IS_GPU_INDEX:
+            dense_index_params = {
+                "metric_type": "L2",
+                "index_type": "GPU_CAGRA",
+                "params": {
+                    'intermediate_graph_degree': 64,
+                    'graph_degree': 32
+                }
+            }
+        else:
+            dense_index_params = {
+                "metric_type": "COSINE",
+                "index_type": "HNSW",
+                "params": {"M": 16, "efConstruction": 200}
+            } 
+        
         
         sparse_index_params = {
             "metric_type": "IP",
@@ -146,17 +156,15 @@ class VectorDatabase:
 
         collection = self.get_collection(collection_name)
         collection.load()
-
         rerank = WeightedRanker(*weights) if rerank_type == "weighted" else RRFRanker()
-        
         milvus_results = collection.hybrid_search(
             search_requests, 
             rerank, 
             limit=top_k, 
             output_fields=["content", "metadata"]
         )
-        
         contents = [self.get_content_from_hits(hits) for hits in milvus_results]
+        collection.release()
 
         return contents
     
@@ -167,8 +175,7 @@ class VectorDatabase:
                ) -> List[Dict[str, Any]]:
         
         collection = self.get_collection(collection_name)
-        collection.load()
-        
+        collection.load()  
         search_params = {
             "data": search_request.data,
             "anns_field": search_request.anns_field,
@@ -176,11 +183,9 @@ class VectorDatabase:
             "limit": top_k,
             "output_fields": ["content", "metadata"]
         }
-        
         milvus_results = collection.search(**search_params)        
-        
         contents = [self.get_content_from_hits(hits) for hits in milvus_results]
-
+        collection.release()
         return contents
     
     def get_all_entities(self, 
@@ -332,6 +337,7 @@ class VectorDatabase:
         reducer = umap.UMAP(metric='cosine',n_components=umap_componemts)
         X_umap = reducer.fit_transform(vectors_array) 
         
+
         #do kmeans
         kmeans = MiniBatchKMeans(n_clusters=k_components, random_state=0, batch_size=kmeans_batch_size)
         labels = kmeans.fit_predict(X_umap)
@@ -343,6 +349,7 @@ class VectorDatabase:
                                                                          method='Kmeans')
                   
         return result, vectors, cluster_vectors
+
     
     def LSH_clustering(self,
                        num_layers=1, 

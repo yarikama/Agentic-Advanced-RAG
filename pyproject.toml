@@ -1,7 +1,7 @@
 [tool.poetry]
-name = "aaai-experiment"
+name = "coling-experiment"
 version = "0.1.0"
-description = ""
+description = "Modular Agentic RAG"
 authors = ["yarikama <amaki30226@gmail.com>"]
 readme = "README.md"
 
@@ -24,14 +24,27 @@ pdfplumber = "^0.11.2"
 llama-index = "^0.10.56"
 langchain-experimental = "^0.0.62"
 datasets = "^2.20.0"
-crewai = {extras = ["tools"], version = "^0.41.1"}
-streamlit = "^1.36.0"
+crewai = {extras = ["tools"], version = "^0.51.1"}
+streamlit = "^1.37.1"
 pydantic = "^2.8.2"
 jq = "^1.7.0"
 ragas = "^0.1.12"
 pandas = "^2.2.2"
 langgraph = "^0.2.3"
 mypy = "^1.11.1"
+streamlit-pydantic = "^0.6.0"
+pyarrow = "^17.0.0"
+neo4j = "^5.23.1"
+lshashpy3 = "^0.0.9"
+pytest = "^8.3.2"
+umap-learn = "^0.5.6"
+numba = "^0.60.0"
+scikit-learn = "^1.5.1"
+matplotlib = "^3.9.2"
+ipython = "^8.27.0"
+ipykernel = "^6.29.5"
+jupyter = "^1.1.1"
+notebook = "^7.2.2"
 
 
 [tool.poetry.group.dev.dependencies]
