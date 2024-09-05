@@ -3,6 +3,7 @@ __pycache__/
 volumes/
 .corpus/
 .data/
+.graph_rag/
 .tmp/
 .env
 graph_rag/
