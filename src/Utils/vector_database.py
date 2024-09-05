@@ -256,7 +256,7 @@ class VectorDatabase:
                 "data": data,
                 "anns_field": "dense_vector",
                 "param": {"metric_type": "COSINE", "params": {}},
-                "limit": search_limit
+                "limit": limit
             }
             search_req = AnnSearchRequest(**search_req)
         
