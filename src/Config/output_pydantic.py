@@ -154,6 +154,7 @@ class OverallState(BaseModel):
         sub_queries_classification_result (Optional[SubQueriesClassificationResult]): Result of sub-queries classification.
         topic_result (Optional[TopicResult]): Result of topic analysis.
         detailed_search_result (Optional[DetailedSearchResult]): Result of detailed search.
+        information_organization_result (str): Result of information organization.
         retrieval_result (Optional[RetrievalResult]): Result of content retrieval.
         rerank_result (Optional[RerankingResult]): Result of content reranking.
         response_audit_result (Optional[ResponseAuditResult]): Result of response auditing.
@@ -170,6 +171,7 @@ class OverallState(BaseModel):
     sub_queries_classification_result: Optional[SubQueriesClassificationResult] = None
     topic_result: Optional[TopicResult] = None
     detailed_search_result: Optional[DetailedSearchResult] = None
+    information_organization_result: Optional[str] = Field(None, description="Result of information organization")
     response_audit_result: Optional[ResponseAuditResult] = None
         
     # Output

@@ -296,6 +296,27 @@ class MultiAgent_RAG:
             all_scores.extend(result.pydantic.relevance_scores)
         return RerankingResult(relevance_scores=all_scores)
     
+    
+    def information_organization_run(self, **kwargs):
+        """
+        Run the information organization task.
+
+        Args:
+            **kwargs: Must include 'user_query' (str), 'retrieved_data' (Dict), and 'community_information' (List[str]).
+
+        Returns:
+            str: The organized information.
+        """
+        self.run_crew(   
+            node_agents=["Information Organizer"],
+            node_tasks=["Information Organization"],
+            node_process="Sequential",
+            node_inputs={"user_query": kwargs.get("user_query"), 
+                         "retrieved_data": kwargs.get("retrieved_data"),
+                         "community_information": kwargs.get("community_information")}
+        )
+        return self.tasks.create_information_organization_task.output.raw
+    
     def generation_run(self, **kwargs):
         """
         Run the generation task.
@@ -308,16 +329,12 @@ class MultiAgent_RAG:
                 - generation_result (str): The generated response.
         """
         self.run_crew(   
-            node_agents=["Information Organizer", "Generator"],
-            node_tasks=["Information Organization", "Generation"],
+            node_agents=["Generator"],
+            node_tasks=["Generation"],
             node_process="Sequential",
-            node_inputs={"user_query": kwargs.get("user_query"), 
-                         "retrieved_data": kwargs.get("retrieved_data"),
-                         "community_information": kwargs.get("community_information")}
+            node_inputs={"user_query": kwargs.get("user_query"),} 
         )
-        return {
-            "generation_result": self.tasks.create_generation_task.output.pydantic
-        }
+        return self.tasks.create_generation_task.output.raw
     
 
         

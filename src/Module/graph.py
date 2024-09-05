@@ -61,22 +61,36 @@ class WorkFlowModularHybridRAG():
         nodes = NodesModularRAG()
         
         # Add nodes into the workflow
-        workflow.add_node("user_input_node", nodes.user_input_node)
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
         workflow.add_node("query_process_node", nodes.query_process_node)
         workflow.add_node("sub_query_classification_node", nodes.sub_query_classification_node)
         workflow.add_node("topic_search_node", nodes.topic_search_node)
         workflow.add_node("detailed_search_node", nodes.detailed_search_node)
+        workflow.add_node("information_organization_node", nodes.information_organization_node)
         workflow.add_node("generation_node", nodes.generation_node)
         
         # Draw the workflow
-        workflow.set_entry_point("user_input_node")
-        workflow.add_edge("user_input_node", "user_query_classification_node")
-        workflow.add_edge("user_query_classification_node", "query_process_node")
+        workflow.set_entry_point("user_query_classification_node")
+        workflow.add_conditional_edges(
+            "user_query_classification_node",
+            nodes.is_retrieval_needed_cnode,
+            {
+                "retrieval_needed": "query_process_node",
+                "retrieval_not_needed": "generation_node",
+            }
+        )
         workflow.add_edge("query_process_node", "sub_query_classification_node")
         workflow.add_edge("sub_query_classification_node", "topic_search_node")
         workflow.add_edge("topic_search_node", "detailed_search_node")
-        workflow.add_edge("detailed_search_node", "generation_node")
+        workflow.add_conditional_edges(
+            "detailed_search_node",
+            nodes.is_information_organization_needed_cnode,
+            {
+                "information_organization_needed": "information_organization_node",
+                "information_organization_not_needed": "generation_node",
+            }
+        )
+        workflow.add_edge("information_organization_node", "generation_node")
         workflow.set_finish_point("generation_node")
         
         # Compile

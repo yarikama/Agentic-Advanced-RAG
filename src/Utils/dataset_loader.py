@@ -17,6 +17,17 @@ class DatasetLoader:
             }
         
     def overall_dataset_processing(self, dataset_name: str, split: str = 'train') -> Tuple[List[Dict[str, Union[str, Dict]]], pd.DataFrame]:
+        """
+        Process a single dataset and return a list of documents and a dataframe.
+
+        Args:
+            dataset_name (str): Name of the dataset to process.
+                squad, natural_questions, trivia_qa, hotpot_qa, deepmind/narrativeqa
+            split (str): Split of the dataset to process. Defaults to 'train'.
+
+        Returns:
+            Tuple[List[Dict[str, Union[str, Dict]]], pd.DataFrame]: A tuple containing a list of documents and a processed dataframe.
+        """
         df = self.load_dataset(dataset_name, split)
         documents, processed_df = self.process_dataset(df, dataset_name)
         
@@ -92,7 +103,6 @@ class DatasetLoader:
             documents.append(document)
             previous_document = document
 
-        # 添加新列到原始 DataFrame
         df['generated_response'] = ''
         df['retrieved_context'] = ''
         
@@ -133,7 +143,6 @@ class DatasetLoader:
                     documents.append(document)
                     previous_document = document
                     
-        # 添加新列到原始 DataFrame
         df['generated_response'] = ''
         df['retrieved_context'] = ''
         
@@ -170,13 +179,13 @@ class DatasetLoader:
         documents = []
         previous_document = None
         for _, row in tqdm(df.iterrows(), total=len(df), desc="Processing Narrative QA"):
-            # document = {
-            #     "content": f"Title: {row['title']}\nContent: {row['document']}",
-            #     "metadata": {
-            #         "dataset_name": "narrativeqa",
-            #         "title": row['title']
-            #     }
-            # }
+            document = {
+                "content": f"Title: {row['title']}\nContent: {row['document']}",
+                "metadata": {
+                    "dataset_name": "narrativeqa",
+                    "title": row['title']
+                }
+            }
             if document == previous_document:
                 continue
             documents.append(document)

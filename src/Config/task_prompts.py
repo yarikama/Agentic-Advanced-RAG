@@ -347,7 +347,9 @@ This output will serve as an organized, faithful representation of the original 
 
 # Response Generation Task
 GENERATION_PROMPT = dedent("""
-Analyze the reranked data and formulate a comprehensive answer to the user's query.
+If there is no information from the previous steps, you can directly answer the user's query,
+However, tell the user that you don't have enough information to answer the query.
+And if there is information, analyze the reranked data and formulate a comprehensive answer to the user's query.
 
 Original user query: {user_query}
 

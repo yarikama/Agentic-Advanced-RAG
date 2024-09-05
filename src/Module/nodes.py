@@ -6,6 +6,7 @@ from Config.rag_config import RAGConfig
 from Config.output_pydantic import *
 from pandas import DataFrame
 import json
+import pandas as pd
 
 class NodesModularRAG():
     def __init__(self):
@@ -14,14 +15,6 @@ class NodesModularRAG():
         self.batch_size = 5
         self.rag_system = MultiAgent_RAG()
         
-    def user_input_node(self, state: OverallState):
-        state.user_query = "Who is the dataset mainly about?"
-        state.specific_collection = "narrative_test_cpu"
-        return {
-            "user_query": state.user_query,
-            "specific_collection": state.specific_collection
-        }
-    
     def user_query_classification_node(self, state: OverallState):
         return {  
             "user_query_classification_result": self.rag_system.user_query_classification_run(user_query=state.user_query)
@@ -77,7 +70,7 @@ class NodesModularRAG():
         # Extract only sorted community information
         sorted_communities_only = [community for community, _ in sorted_communities]
         
-        topic_searching_results = self.rag_system.topic_searching_run(community_information=sorted_communities_only)
+        topic_searching_results = self.rag_system.topic_searching_run(community_information=sorted_communities_only, user_query=state.user_query)
         
         # Create a dictionary with community information and scores
         communities_with_scores = {f"community_{i}": {"info": community, "score": score} 
@@ -133,14 +126,19 @@ class NodesModularRAG():
             "detailed_search_result": DetailedSearchResult(sorted_retrieved_data=final_results)
         }
         
+        
+    def information_organization_node(self, state: OverallState):
+        return {
+            "information_organization_result": self.rag_system.information_organization_run(
+                user_query=state.user_query,
+                retrieved_data=state.detailed_search_result.sorted_retrieved_data if state.detailed_search_result else [],
+                community_information=state.topic_result.communities_summaries if state.topic_result else []
+            )
+        }
          
     def generation_node(self, state: OverallState):        
         return {
-            "generation_result": self.rag_system.generation_run(
-                user_query=state.user_query,
-                retrieved_data=state.detailed_search_result.sorted_retrieved_data,
-                community_information=state.topic_result.communities_summaries
-            )
+            "generation_result": self.rag_system.generation_run(user_query=state.user_query)
         }
         
     def repeat_count_node(self, state: OverallState):
@@ -148,7 +146,7 @@ class NodesModularRAG():
         if repeat_times is None:
             repeat_times = 0
         return {
-            "repeat_times": repeat_times+1
+            "repeat_times": repeat_times + 1
         }
 
     def database_update_node(self, state: OverallState):
@@ -156,13 +154,19 @@ class NodesModularRAG():
         
         
     # Conditional Nodes
-    def is_retrieval_needed(self, state: OverallState):
+    def is_retrieval_needed_cnode(self, state: OverallState):
         if state.user_query_classification_result.needs_retrieval:
             return "retrieval_needed"
         else:
             return "retrieval_not_needed"
         
-    def is_restart_needed(self, state: OverallState):
+    def is_information_organization_needed_cnode(self, state: OverallState):
+        if (state.topic_result and state.topic_result.communities_with_scores) or (state.detailed_search_result and state.detailed_search_result.sorted_retrieved_data):
+            return "information_organization_needed"
+        else:
+            return "information_organization_not_needed"
+    
+    def is_restart_needed_cnode(self, state: OverallState):
         if state.response_audit_result.restart_required and state.repeat_times < 3:
             return "restart_needed"
         else:
