@@ -40,7 +40,7 @@ class Tasks:
             "Sub Queries Classification w/o sc":    self.create_sub_queries_classification_task_without_specific_collection,
             "Retrieval":                            self.create_retrieval_task,
             "Retrieval Detail Data From Topic":     self.create_retrieval_detail_data_from_topic_task,
-            "Rerank":                               self.create_reranking_task,
+            "Reranking":                            self.create_reranking_task,
             "Information Organization":             self.create_information_organization_task,
             "Generation":                           self.create_generation_task,
             "Response Audit":                       self.create_response_audit_task,
@@ -60,7 +60,7 @@ class Tasks:
             "Sub Queries Classification w/ sc",
             "Sub Queries Classification w/o sc",
             "Retrieval",
-            "Rerank",
+            "Reranking",
             "Generation",
             "Response Audit",
             "Database Update",
@@ -199,19 +199,17 @@ class Tasks:
             expected_output=RERANKING_EXPECTED_OUTPUT,
             output_pydantic=RerankingResult,
             context=context_task_array,
-            tools=self.tools.get_tools(**{"rerank": True}),
         )
         
-    def _information_organization_task(self, context_task_array: List[Task]):
+    def _information_organization_task(self):
         """
         Task to summarize all the data retrieved and all the community information
         args: user_query
         """
         return Task(
-            description=INFORMATION_ORGANIZATION_PROMPT,
             agent=self.agents.create_information_organizer,
+            description=INFORMATION_ORGANIZATION_PROMPT,
             expected_output=INFORMATION_ORGANIZATION_EXPECTED_OUTPUT,
-            context=context_task_array,
         )
         
     def _generation_task(self, context_task_array: List[Task]):

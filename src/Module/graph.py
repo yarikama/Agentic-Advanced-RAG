@@ -1,9 +1,9 @@
 from langgraph.graph import StateGraph
-from .state import OverallState, SingleState
 from .nodes import NodesModularRAG, NodesMultiAgentRAG, NodesSingleAgentRAG
 from Utils import *
-from Frontend import *
+# from Frontend import *
 from Config.rag_config import RAGConfig
+from Config.output_pydantic import *
 
 class WorkFlowModularRAG():
     def __init__(self, 
@@ -52,6 +52,37 @@ class WorkFlowModularRAG():
         # Compile
         self.graph = workflow.compile()
         
+class WorkFlowModularHybridRAG():
+    def __init__(self):
+        # Create the workflow(graph)
+        workflow = StateGraph(OverallState)
+        
+        # Add nodes class
+        nodes = NodesModularRAG()
+        
+        # Add nodes into the workflow
+        workflow.add_node("user_input_node", nodes.user_input_node)
+        workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
+        workflow.add_node("query_process_node", nodes.query_process_node)
+        workflow.add_node("sub_query_classification_node", nodes.sub_query_classification_node)
+        workflow.add_node("topic_search_node", nodes.topic_search_node)
+        workflow.add_node("detailed_search_node", nodes.detailed_search_node)
+        workflow.add_node("generation_node", nodes.generation_node)
+        
+        # Draw the workflow
+        workflow.set_entry_point("user_input_node")
+        workflow.add_edge("user_input_node", "user_query_classification_node")
+        workflow.add_edge("user_query_classification_node", "query_process_node")
+        workflow.add_edge("query_process_node", "sub_query_classification_node")
+        workflow.add_edge("sub_query_classification_node", "topic_search_node")
+        workflow.add_edge("topic_search_node", "detailed_search_node")
+        workflow.add_edge("detailed_search_node", "generation_node")
+        workflow.set_finish_point("generation_node")
+        
+        # Compile
+        self.graph = workflow.compile()
+        
+        
 class WorkFlowMultiAgentRAG():
     def __init__(self, 
                 query: str, 
@@ -88,3 +119,7 @@ class WorkFlowSingleAgentRAG():
         # Compile
         self.graph = workflow.compile()
         
+        
+if __name__ == "__main__":
+    workflow = WorkFlowModularHybridRAG()
+    print(workflow)

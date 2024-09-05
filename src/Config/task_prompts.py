@@ -184,7 +184,8 @@ FINAL CHECK: Before submitting your response, be sure that the scores list conta
 """)
 
 TOPIC_RERANKING_EXPECTED_OUTPUT = dedent("""
-TopicRerankingResult(relevant_scores=[int, int, ...])
+class TopicRerankingResult(BaseModel):
+    relevant_scores: List[int]
 """)
 
 # Topic Searching Task
@@ -197,14 +198,15 @@ You have received multiple pieces of community information related to a user que
 Your task is to analyze this information and help prepare for a vector database search to answer the user's query.
 
 Follow these steps:
+0. If no community information is provided, return 2 empty list.
 1. Carefully read and analyze all provided community information.
 2. Summarize the key points from this information and from the user query into concise community summaries.
 3. Based on these summaries, imagine what relevant document chunks might exist in a vector database or what might the response contain.
 4. Generate possible document chunks that could help answer the user's query.
 
 Your output should be a Pydantic model instance of TopicSearchingResult, containing:
-1. community_summaries: A list of strings summarizing key points from the community information.
-2. possible_document_chunks: A list of strings representing imagined document chunks that might exist in the vector database.
+1. communities_summaries: A list of strings summarizing key points from the community information.
+2. possible_answers: A list of strings representing imagined document chunks that might exist in the vector database.
 
 Guidelines:
 - Each community summary should capture a distinct key point or theme from the provided information.
@@ -220,12 +222,12 @@ Remember, the goal is to create summaries and imagine document chunks that will 
 
 TOPIC_SEARCHING_EXPECTED_OUTPUT = dedent("""
 TopicSearchingResult(
-    community_summaries=[
+    communities_summaries=[
         "Key point 1 summarized from community information",
         "Key point 2 summarized from community information",
         "Key point 3 summarized from community information"
     ],
-    possible_document_chunks=[
+    possible_answers=[
         "An imagined document chunk that might exist in the vector database, relevant to the user's query and community summaries.",
         "Another potential document chunk covering a different aspect of the topic, formulated to aid in semantic search.",
         "A third imagined document chunk providing additional context or information related to the user's query."
@@ -293,7 +295,7 @@ Important notes:
 - Do not include any explanations or additional text outside the Pydantic object.
 - If you find that your score list does not match the number of data items : {batch_size}, you MUST redo the entire process until it does.
 
-Your output must be a Pydantic object of the TopicRerankingResult class with the following structure:
+Your output must be a Pydantic object of the RerankingResult class with the following structure:
 class RerankingResult(BaseModel):
     relevant_scores: List[int]
 
