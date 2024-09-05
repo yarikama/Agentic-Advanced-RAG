@@ -3,6 +3,8 @@ from textwrap import dedent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from .tools import Tools
+# from Frontend import * 
+from langchain_core.callbacks.base import BaseCallbackHandler
 
 class Agents:
     def __init__(self, temperature: float, model_name: str, tools: Tools):
@@ -10,7 +12,8 @@ class Agents:
         self.temperature = temperature
         self.tools = tools
         self.model_name = model_name
-    
+        # self.callback_function = callback_function
+        self.callback_function = BaseCallbackHandler
         if self.model_name != "crewAI-llama3":
             self.llm = ChatOpenAI(
                 model = self.model_name,
@@ -29,200 +32,291 @@ class Agents:
         self.create_plan_coordinator = self._plan_coordinator()
         self.create_query_processor = self._query_processor()
         self.create_classifier = self._classifier()
+        self.create_topic_searcher = self._topic_searcher()
         self.create_retriever = self._retriever()
         self.create_reranker = self._reranker()
+        self.create_information_organizer = self._information_organizer()
         self.create_generator = self._generator()
-        self.create_summarizer = self._summarizer()
         self.create_response_auditor = self._response_auditor()
         self.create_database_updater = self._database_updater()
+        
+        self.agent_map = {
+            "Classifier": self.create_classifier,
+            "Plan Coordinator": self.create_plan_coordinator,
+            "Query Processor": self.create_query_processor,
+            "Topic Searcher": self.create_topic_searcher,
+            "Retriever": self.create_retriever,
+            "Reranker": self.create_reranker,
+            "Information Organizer": self.create_information_organizer,
+            "Generator": self.create_generator,
+            "Response Auditor": self.create_response_auditor,
+            "Database Updater": self.create_database_updater,
+        }
+        
+    def get_agents(self, *args):
+        """
+        Options:
+        - Classifier
+        - Plan Coordinator
+        - Query Processor
+        - Topic Searcher
+        - Information Organizer
+        - Retriever
+        - Reranker
+        - Generator
+        """
+        agents_list = []
+        for agent_name in args:
+            if agent_name in self.agent_map:
+                agents_list.append(self.agent_map[agent_name])
+            else:
+                raise ValueError(f"Agent '{agent_name}' not found in agent_map.")
+        return agents_list
     
+    # # Getters for all agents in nodes
+    # def get_user_query_classification_node_agent(self):
+    #     return [
+    #         self.create_classifier,
+    #     ]
+        
+    # def get_retrieval_and_generation_node_agent(self):
+    #     return [
+    #         self.create_retriever,
+    #         self.create_reranker,
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #     ]
+        
+    # def get_generation_node_agent(self):
+    #     return [
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #     ]
+        
+    # def get_database_update_node_agent(self):
+    #     return [
+    #         self.create_database_updater,
+    #     ]
     
-    # Getters for all agents in nodes
-    def get_user_query_classification_node_agent(self):
-        return [
-            self.create_classifier,
-        ]
+    # # Getters for all agents in overall process
+    # def get_sequential_agents(self):
+    #     return [
+    #         self.create_classifier,
+    #         self.create_plan_coordinator, # Only Plan Coordinator is used in Sequential
+    #         self.create_query_processor,
+    #         self.create_retriever,
+    #         self.create_reranker,
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #         self.create_database_updater,
+    #     ]
         
-    def get_retrieval_and_generation_node_agent(self):
-        return [
-            self.create_retriever,
-            self.create_reranker,
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-        ]
-        
-    def get_generation_node_agent(self):
-        return [
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-        ]
-        
-    def get_database_update_node_agent(self):
-        return [
-            self.create_database_updater,
-        ]
-    
-    # Getters for all agents in overall process
-    def get_sequential_agents(self):
-        return [
-            self.create_classifier,
-            self.create_plan_coordinator, # Only Plan Coordinator is used in Sequential
-            self.create_query_processor,
-            self.create_retriever,
-            self.create_reranker,
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-            self.create_database_updater,
-        ]
-        
-    def get_hierarchical_agents(self):
-        return [
-            self.create_classifier,
-            self.create_query_processor,
-            self.create_retriever,
-            self.create_reranker,
-            self.create_generator,
-            self.create_summarizer,
-            self.create_response_auditor,
-            self.create_database_updater,
-        ]
+    # def get_hierarchical_agents(self):
+    #     return [
+    #         self.create_classifier,
+    #         self.create_query_processor,
+    #         self.create_retriever,
+    #         self.create_reranker,
+    #         self.create_generator,
+    #         self.create_summarizer,
+    #         self.create_response_auditor,
+    #         self.create_database_updater,
+    #     ]
     
         
     # Agent definitions
     def _classifier(self):
         return Agent(
-        role='Query Classifier',
-        goal='Accurately determine if a query requires information retrieval or can be answered directly.',
-        backstory="""
-        Your primary function is to 
-        examine incoming queries and decide whether they need external information retrieval 
-        or can be answered with existing knowledge. You understand the nuances of different 
-        query types and can distinguish between those requiring fact lookup and those that 
-        can be handled with general knowledge or language processing.
-        """,
-        verbose=True,
-        llm=self.llm,
-        memory=True,
-        allow_delegation=False,
-    )
-        
-    def _plan_coordinator(self):
-        return Agent(
-            role='Plan Coordinator',
-            goal='Create a comprehensive task plan based on the user query.',
+            role='Query Classifier',
+            goal="""Accurately determine if a query requires information retrieval or can be answered directly.
+            Your primary function is to 
+            examine incoming queries and decide whether they need external information retrieval 
+            or can be answered with existing knowledge. You understand the nuances of different 
+            query types and can distinguish between those requiring fact lookup and those that 
+            can be handled with general knowledge or language processing.""",
             backstory="""
-            For user queries, you need to define objectives, create step-by-step plans, 
-            and assign responsibilities to your team members: 
-            Query Processor, Classifier, Retriever, Generator, Response Auditor, Database Updater, and Summarizer.
+            You are an AI specialist with years of experience in natural language processing. 
+            Your expertise lies in understanding the nuances of human queries and efficiently 
+            categorizing them for optimal processing.
             """,
             verbose=True,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+#             callbacks=[self.callback_function],
+        )
+        
+    def _plan_coordinator(self):
+        return Agent(
+            role='Plan Coordinator',
+            goal="""
+            For user queries, you need to define objectives, create step-by-step plans,
+            and coordinate the execution of tasks among different agents.
+            """,
+            backstory="""
+            You are a seasoned project manager with a knack for breaking down complex tasks 
+            into manageable steps. Your experience in coordinating diverse teams makes you 
+            the perfect fit for organizing the efforts of various specialized agents.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            allow_delegation=False,
+#             callbacks=[self.callback_function],
         )
         
     def _query_processor(self):
         return Agent(
             role='Query Processor',
-            goal='Optimize user queries for enhanced information retrieval and analysis.',
+            goal="""Optimize user queries for enhanced information retrieval and analysis.
+            You decompose complex ones, transform and optimize them for better retrieval, 
+            and break them into manageable sub-queries when needed.
+            """,
             backstory="""
-            You decompose complex ones, transform and optimize them 
-            for better retrieval, and break them into manageable sub-queries when needed.
+            You are a linguistic expert with a deep understanding of query optimization techniques. 
+            Your background in computational linguistics allows you to effortlessly transform and 
+            decompose complex queries into their most effective forms.
             """,
             verbose=True,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+#             callbacks=[self.callback_function],
+        )
+        
+    def _topic_searcher(self):
+        return Agent(
+            role='Topic Searcher',
+            goal="""
+            Receive community information related to the user_query, sorted in descending order of relevance.
+            Analyze and synthesize this information to formulate potential answers that could help address the user_query.
+            Generate a summary of key points derived from the provided community data.
+            If the provided community information is insufficient to generate meaningful key points or potential answers, clearly state this limitation.
+            """,
+            backstory="""
+            You are a seasoned librarian with a talent for organizing and categorizing information. 
+            Your years of experience in managing vast amounts of data have honed your skills in 
+            quickly identifying key topics and their relationships.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            allow_delegation=False,
+#             callbacks=[self.callback_function],
         )
         
     def _retriever(self):
         return Agent(
             role='Retriever',
-            goal='Retrieve relevant information from the database for given sub-queries.',
+            goal="""Retrieve relevant information from the database for given sub-queries.
+            You search the database for topics and details related to the user query, 
+            gather relevant information, and compile results for the Generator.
+            """,
             backstory="""
-            You determine retrieval necessity for sub-queries, search the database, 
-            retrieve relevant information, and compile results for the Generator.
-            Sometimes there may be no relevant information in the database. You can ignore the sub-query.
+            You are a skilled data analyst with a background in information retrieval systems. 
+            Your ability to quickly sift through large datasets and pinpoint relevant information 
+            is unparalleled.
             """,
             verbose=True,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+#             callbacks=[self.callback_function],
         )
         
     def _reranker(self):
         return Agent(
             role='Reranker',
-            goal='Evaluate and reorder retrieved data based on query relevance',
-            backstory="""
-            As a Reranker, your job is to assess the relevance of retrieved data to the original query.
+            goal="""Evaluate and reorder retrieved data based on query relevance,
+            and assess the relevance of retrieved data to the original query.
             You need to carefully compare each piece of data to the query, assign a relevance score,
-            and reorder the data so that the most relevant information appears first.
-            Your work is crucial in ensuring that the most pertinent information is prioritized for further analysis.
+            """,
+            backstory="""
+            You are a former search engine optimizer with a keen eye for relevance. Your experience 
+            in ranking information has given you unique insights into assessing and prioritizing 
+            information based on its pertinence to a given query.
             """,
             verbose=True,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
+#             callbacks=[self.callback_function],
         )
 
-    def _generator(self):
+    def _information_organizer(self):
         return Agent(
-            role='Generator',
-            goal='Analyze data and generate insights on root causes and trends.',
+            role='Information Organizer',
+            goal="""Your task is to structure and consolidate the retrieved data and community information, preserving the original tone and avoiding any fabrication. Your organized output will serve as a foundation for subsequent response generation by other agents.""",
             backstory="""
-            You process data from the Retriever, generate insights, and identify 
-            root causes and trends to present preliminary conclusions.
-            """,
-            verbose=True,
-            llm=self.llm,
-            memory=True,
-            allow_delegation=False,
-        )
-        
-    def _summarizer(self):
-        return Agent(
-            role='Summarizer',
-            goal='Create a concise, high-quality final answer from the Generator\'s output.',
-            backstory="""
-            You refine the Generator's output into a clear, concise response that 
-            directly addresses the user query while maintaining depth and quality.
-            """,
-            verbose=True,
-            llm=self.llm,
-            memory=True,
-            allow_delegation=False,
-        )
-        
-    def _response_auditor(self):
-        return Agent(
-            role='Response Auditor',
-            goal='Ensure alignment between user query, conclusions, and task outcome.',
-            backstory="""
-            You review the query and conclusions, assess relevance and completeness, 
-            identify gaps, and approve or recommend improvements.
-            """,
-            verbose=True,
-            llm=self.llm,
-            memory=True,
-            allow_delegation=False,
-        )
-
-        
-    def _database_updater(self):
-        return Agent(
-            role='Database Updater',
-            goal='Document and store task conclusions in the database.',
-            backstory="""
-            You get information from the Summarizer's report, format it for 
-            storage, and update the database after approval from the Response Auditor.
+            You are an AI expert in information organization, with a talent for structuring and consolidating data.
+            You excel at distilling complex data into clear, concise summaries based on user queries.
+            Your unique ability to identify key concepts and connect diverse information has aided numerous breakthroughs across various fields.
+            You approach each task eagerly, seeing it as a chance to uncover and present crucial insights that empower decision-makers and innovators.
             """,
             verbose=True,
             llm=self.llm,
             memory=True,
             cache=True,
             allow_delegation=False,
+    #         callbacks=[self.callback_function],   
         )
+
+    def _generator(self):
+        return Agent(
+            role='Generator',
+            goal='Analyze data and generate insights on the data retrieved to reponse to user query.',
+            backstory="""
+            You are a veteran analyst with decades of experience in data interpretation and query resolution. 
+            Your career in both academia and industry has honed your ability to swiftly connect user queries 
+            with relevant information, distilling complex data into clear, accurate answers. Known for your 
+            precision and insight, you excel at crafting responses that directly address the heart of each query.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            allow_delegation=False,
+#             callbacks=[self.callback_function],
+        )
+        
+    def _response_auditor(self):
+        return Agent(
+            role='Response Auditor',
+            goal="""Ensure alignment between user query, conclusions, and task outcome.
+            You review the query and conclusions, assess relevance and completeness, 
+            identify gaps, and approve or recommend improvements.
+            """,
+            backstory="""
+            You are a seasoned quality assurance expert with a keen eye for detail. Your background 
+            in both data analysis and customer service has made you adept at evaluating responses 
+            for accuracy, relevance, and completeness. You take pride in your ability to spot 
+            discrepancies and suggest improvements, ensuring that every answer meets the highest standards.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            allow_delegation=False,
+#             callbacks=[self.callback_function],
+        )
+        
+    def _database_updater(self):
+        return Agent(
+            role='Database Updater',
+            goal='store the task(query) defined by user and the conclusions from your co=workers in the database.',
+            backstory="""
+            You are a meticulous data curator with extensive experience in information management. 
+            Your expertise lies in efficiently organizing and storing complex data. You have a 
+            talent for structuring information in ways that enhance its accessibility and usefulness 
+            for future queries, ensuring that the knowledge base remains up-to-date and valuable.
+            """,
+            verbose=True,
+            llm=self.llm,
+            memory=True,
+            cache=True,
+            allow_delegation=False,
+#             callbacks=[self.callback_function],
+        )
+        
+    
