@@ -5,9 +5,13 @@ volumes/
 .data/
 .graph_rag/
 .tmp/
+.txt/
+*.txt
 .env
 graph_rag/*
+!graph_rag/output/20240825-164936/artifacts/
+graph_rag/output/20240825-164936/artifacts/*
+!graph_rag/output/20240825-164936/artifacts/**
 !graph_rag/settings.yaml
 !graph_rag/prompts/
 !graph_rag/input
-!graph_rag/20240825-164936/artifacts

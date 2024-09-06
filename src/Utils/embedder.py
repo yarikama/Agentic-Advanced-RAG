@@ -24,21 +24,21 @@ class OpenAIEmbeddingFunction:
             "text-embedding-3-small": 1536,
             "text-embedding-3-large": 3072
         }
-        return dimensions.get(self.model_name, 1536)  # 默認為 1536 如果模型未知
+        return dimensions.get(self.model_name, 1536)
 
-    def encode_queries(self, texts):
+    def encode_queries(self, texts: Union[str, List[str]]):
         return self._encode(texts)
 
-    def encode_documents(self, texts):
+    def encode_documents(self, texts: Union[str, List[str]]):
         return self._encode(texts)
 
-    def _encode(self, texts):
+    def _encode(self, texts: Union[str, List[str]]):
         response = self.client.embeddings.create(
             model=self.model_name,
             input=texts
         )
         return [embedding.embedding for embedding in response.data]
-
+        
     @property
     def dim(self):
         return self._dim
@@ -77,12 +77,12 @@ class Embedder:
     def fit_sparse_embedder(self, new_documents: List[str]):
         self.sparse_embedder.fit(new_documents)
 
-    def save_sparse_embedder(self, path: str = const.EMBEDDOMG_SPARSE_CORPUS):
+    def save_sparse_embedder(self, path: str = const.EMBEDDING_SPARSE_CORPUS):
         if not os.path.exists("./.corpus"):
             os.makedirs("./.corpus")
         self.sparse_embedder.save(path)
 
-    def load_sparse_embedder(self, path: str = const.EMBEDDOMG_SPARSE_CORPUS):
+    def load_sparse_embedder(self, path: str = const.EMBEDDING_SPARSE_CORPUS):
         self.sparse_embedder.load(path)
 
     def embed_dense(self, text: Union[str, List[str]]) -> Union[List[float], List[List[float]]]:

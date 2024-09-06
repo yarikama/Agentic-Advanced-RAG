@@ -7,6 +7,7 @@ import itertools
 import numpy as np
 import scipy.sparse
 from tqdm import tqdm
+import concurrent.futures
 from nltk.corpus import words
 from dotenv import load_dotenv
 from .embedder import Embedder
@@ -206,7 +207,7 @@ class DataProcessor:
         chunks, all_contents_for_corpus = self.split_document(document)
         print("Document split successfully.\n")
         
-        if use_new_corpus or is_create:
+        if use_new_corpus:
             def generate_semi_random_text() -> str:
                 return ' '.join(random.choice(self.ntlk_word) for _ in range(50))
             additional_docs = [generate_semi_random_text() for _ in range(1000)]
@@ -226,11 +227,11 @@ class DataProcessor:
                                 is_create: bool = const.IS_CREATE_COLLECTION, 
                                 batch_size: int = const.BATCH_SIZE
                                 ):  
+        def get_window_content(doc_contents, index, window_size=1):
+            start = max(0, index - window_size)
+            end = min(len(doc_contents), index + window_size + 1)
+            return " ".join(doc_contents[start:end])
         
-        if is_create:
-                dense_dim = self.embedder.dense_dim
-                self.vectordatabase.create_collection(collection_name, dense_dim)
-
         def entity_generator():
             for batch in chunked_iterable(chunks, batch_size):
                 doc_contents = [chunk.page_content for chunk in batch]
@@ -253,12 +254,6 @@ class DataProcessor:
                     valid_dense = dense_matrix[valid_indices].tolist()
                     valid_sparse = sparse_matrix[valid_indices]
                     
-                    # sentence window
-                    def get_window_content(doc_contents, index, window_size=1):
-                        start = max(0, index - window_size)
-                        end = min(len(doc_contents), index + window_size + 1)
-                        return " ".join(doc_contents[start:end])
-                    
                     valid_contents = [
                         get_window_content(doc_contents, i)
                         for i in valid_indices
@@ -273,16 +268,28 @@ class DataProcessor:
                     ]
                 else:
                     print("Warning: All documents in this batch have empty sparse vectors. Skipping batch.")
-        
-        # streaming insert
-        total_inserted = 0
-        for batch in entity_generator():
+                    
+        def insert_batch(batch):
             self.vectordatabase.insert_data(collection_name, batch)
-            total_inserted += len(batch[2])  
-            print(f"Inserted batch of {len(batch[2])} entities. Total: {total_inserted}")
-        
-        print(f"Successfully inserted {total_inserted} chunks into Milvus.\n")
+            return len(batch[2])
 
+        if is_create:
+            dense_dim = self.embedder.dense_dim
+            self.vectordatabase.create_collection(collection_name, dense_dim)
+            
+        max_workers = os.cpu_count()*2
+        total_inserted = 0
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
+            future_to_batch = {executor.submit(insert_batch, batch): batch for batch in entity_generator()}
+            for future in concurrent.futures.as_completed(future_to_batch):
+                batch = future_to_batch[future]
+                try:
+                    inserted_count = future.result()
+                    total_inserted += inserted_count
+                    print(f"Inserted batch of {inserted_count} entities. Total: {total_inserted}")
+                except Exception as exc:
+                    print(f"Error inserting batch: {exc}")
+        print(f"Successfully inserted {total_inserted} chunks into Milvus.\n")
         
 if __name__ == "__main__":
     vectordatabase = VectorDatabase()
