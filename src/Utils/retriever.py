@@ -25,9 +25,6 @@ class Retriever:
                 vectordatabase: Optional[VectorDatabase] = None,
                 graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
                 embedder: Optional[Embedder] = None):
-        # 移除這個檢查，允許通過 __init__ 創建實例
-        # if Retriever._instance is not None:
-        #     raise Exception("This class is a singleton. Use get_instance() to get the instance.")
         
         self.embedder = embedder if embedder else Embedder()
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()

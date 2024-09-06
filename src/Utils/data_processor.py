@@ -1,18 +1,21 @@
 import os
+import re
 import nltk
 import json
 import random
 import tempfile
 import itertools
+import unicodedata
 import numpy as np
 import scipy.sparse
 from tqdm import tqdm
 import concurrent.futures
 from nltk.corpus import words
+from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from .embedder import Embedder
-from Config import constants as const
 from datasets import load_dataset
+from Config import constants as const
 from .vector_database import VectorDatabase
 from langchain.schema.document import Document
 from typing import List, Union, Dict, Generator, Optional
@@ -159,11 +162,46 @@ class DataProcessor:
                 return None
 
             documents = loader.load()
-            return [{"content": doc.page_content, "metadata": doc.metadata} for doc in documents]
+            processed_documents = []
+            for doc in documents:
+                processed_content = self.preprocess_content(doc.page_content)
+                processed_documents.append({
+                    "content": processed_content,
+                    "metadata": doc.metadata
+                })
+            print("Data preprocessing done.")
+            return processed_documents
 
         except Exception as e:
             print(f"Error loading file {file_path}: {str(e)}")
             return None
+
+    def preprocess_content(self, content: str) -> str:
+        soup = BeautifulSoup(content, 'html.parser')
+        text = soup.get_text()
+
+        # 統一為 NFKC 正規化形式
+        text = unicodedata.normalize('NFKC', text)
+
+        # 移除 URL
+        text = re.sub(r'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\\(\\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+', '', text)
+
+        # 移除多餘的空白字符
+        text = re.sub(r'[ \t]+', ' ', text).strip()
+
+        # 移除特殊字符，但保留某些標點符號
+        text = re.sub(r'[^\w\s.,!?;:()"-]', '', text)
+
+        # 統一引號
+        text = text.replace('"', '"').replace('"', '"')
+
+        # 移除連續的標點符號
+        text = re.sub(r'([.,!?;:])\1+', r'\1', text)
+
+        # 確保句子之間有適當的空格
+        text = re.sub(r'([.,!?;:])\s*', r'\1 ', text)
+
+        return text.strip()
 
     def split_document(self, 
                        documents: List[Dict[str, Union[str, Dict]]], 
@@ -183,9 +221,7 @@ class DataProcessor:
         for doc in documents:
             content = doc["content"]
             metadata = doc["metadata"]           
-            # Only split the content instead of the whole document 
             split_texts = text_splitter.split_text(content)
-            # Store the metadata in each chunk            
             doc_chunks = [Document(page_content=chunk, metadata=metadata) for chunk in split_texts]
             chunks.extend(doc_chunks)
 
