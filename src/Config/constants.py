@@ -1,3 +1,8 @@
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # For Milvus Settings:
 MILVUS_HOST = "localhost"
 MILVUS_PORT = "19530"
@@ -8,7 +13,12 @@ MILVUS_DATABASE_NAME = "default"
 EMBEDDING_MODEL_NAME = 'text-embedding-3-small'
 EMBEDDING_DEVICE = 'cuda'
 EMBEDDING_LANGUAGE = 'en'
-EMBEDDING_DENSE_DIM = 1024 if EMBEDDING_MODEL_NAME == 'infgrad/stella_en_1.5B_v5' else 1536
+if EMBEDDING_MODEL_NAME == 'infgrad/stella_en_1.5B_v5':
+    EMBEDDING_DENSE_DIM = 1024
+elif EMBEDDING_MODEL_NAME == 'text-embedding-3-small':
+    EMBEDDING_DENSE_DIM = 1536
+elif EMBEDDING_MODEL_NAME == 'text-embedding-3-large':
+    EMBEDDING_DENSE_DIM = 3072
 EMBEDDING_SPARSE_CORPUS = "corpus.json"
 
 # For Search Settings:
@@ -41,4 +51,18 @@ BATCH_SIZE = 2000
 MODEL_NAME = "gpt-4o-mini"
 MODEL_TEMPERATURE = 0.1
 
-# For Milvus Settings:
+# Node Settings:
+NODE_BATCH_SIZE = 3
+NODE_RETRIEVAL_LEVEL = 0
+
+# For Neo4j Settings:
+NEO4J_URI = os.getenv("NEO4J_URI")
+NEO4J_USERNAME = os.getenv("NEO4J_USERNAME")
+NEO4J_PASSWORD = os.getenv("NEO4J_PASSWORD")
+NEO4J_DATABASE = os.getenv("NEO4J_DATABASE")
+
+NEO4J_TOP_K = 5
+NEO4J_TOP_CHUNKS = 5
+NEO4J_TOP_COMMUNITIES = 5
+NEO4J_TOP_OUTSIDE_RELS = 5
+NEO4J_TOP_INSIDE_RELS = 5

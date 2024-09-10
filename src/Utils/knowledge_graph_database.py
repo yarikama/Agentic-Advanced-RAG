@@ -5,18 +5,19 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase, Result
 from typing import List, Dict, Any
 from langchain_community.graphs import Neo4jGraph
+import Config.constants as const
 
 load_dotenv()
 
 class KnowledgeGraphDatabase:
     def __init__(self):
-        self.neo4j_uri = os.getenv("NEO4J_URI")
-        self.neo4j_user = os.getenv("NEO4J_USER")
-        self.neo4j_password = os.getenv("NEO4J_PASSWORD")
-        self.neo4j_database = os.getenv("NEO4J_DATABASE")
+        self.neo4j_uri = const.NEO4J_URI
+        self.neo4j_username = const.NEO4J_USERNAME
+        self.neo4j_password = const.NEO4J_PASSWORD
+        self.neo4j_database = const.NEO4J_DATABASE
         self.driver = GraphDatabase.driver(
             self.neo4j_uri, 
-            auth=(self.neo4j_user, self.neo4j_password)
+            auth=(self.neo4j_username, self.neo4j_password)
         )       
         print("GraphDatabase initialized.")
     
@@ -39,7 +40,7 @@ class KnowledgeGraphDatabase:
         return total
     
     def transform_graph_rag_to_neo4j(self, datapath: str = "artifasts"):
-        """
+        """ reference
         https://medium.com/towards-data-science/integrating-microsoft-graphrag-into-neo4j-e0d4fa00714c
         """
 
@@ -180,8 +181,37 @@ class KnowledgeGraphDatabase:
         
     def db_query(self, cypher: str, params: Dict[str, Any] = {}):
         return self.driver.execute_query(
-            cypher, 
-            parameters_=params, 
-            result_transformer_ = Result.to_df
+            cypher,
+            parameters_=params,
+            result_transformer_ = lambda result: [record.data() for record in result]  # Converts the result to a list of dicts
         )
     
+    def create_entity_vector_index(self):
+        """
+        Create a vector index for the entity.
+        """
+        index_name = "entity"
+        self.db_query(
+        """ 
+        CREATE VECTOR INDEX """ + index_name + """ 
+        IF NOT EXISTS FOR (e:__Entity__) ON e.description_embedding
+        OPTIONS {
+            indexConfig: {
+                `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,
+                `vector.similarity_function`: 'cosine'
+            }
+        }
+        """
+        )
+        
+    def create_community_weight(self):
+        """
+        Create a weight for the community.
+        """
+        self.db_query(
+        """
+        MATCH (n:`__Community__`)<-[:IN_COMMUNITY]-()<-[:HAS_ENTITY]-(c)
+        WITH n, count(distinct c) AS chunkCount
+        SET n.weight = chunkCount
+        """
+        )

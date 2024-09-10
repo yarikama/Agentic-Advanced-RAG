@@ -106,7 +106,7 @@ class Tasks:
             agent=self.agents.create_query_processor,
             description=QUERY_PROCESS_PROMPT,
             expected_output=QUERY_PROCESS_EXPECTED_OUTPUT,
-            output_pydantic=QueriesProcessResult,
+            output_pydantic=QueryProcessResult,
         )
         
     def _sub_queries_classification_task_without_specific_collection(self, context_task_array: List[Task]):

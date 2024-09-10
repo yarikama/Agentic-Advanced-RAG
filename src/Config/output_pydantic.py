@@ -1,5 +1,9 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Annotated
+import pandas as pd
+
+
+
 
 # Pydantic Models For Task Outputs
 class UserQueryClassificationResult(BaseModel):
@@ -13,7 +17,7 @@ class UserQueryClassificationResult(BaseModel):
     needs_retrieval: bool = Field(..., description="Indicates whether retrieval is needed")
     justification: str = Field(..., description="Explanation for the classification decision")
 
-class QueriesProcessResult(BaseModel):
+class QueryProcessResult(BaseModel):
     """
     Represents the result of processing queries.
 
@@ -57,7 +61,7 @@ class TopicSearchingResult(BaseModel):
     communities_summaries: List[str]
     possible_answers: List[str]
             
-class TopicResult(BaseModel):
+class SearchTopicsAndHyDEResult(BaseModel):
     """
     Represents the comprehensive result of topic analysis.
 
@@ -140,7 +144,36 @@ class ResponseAuditResult(BaseModel):
     overall_score: int = Field(..., ge=0, le=100)
     restart_required: bool
     additional_comments: Optional[str] = None
-    
+
+
+
+def concat_answers(list1: List[str], new_answer:List[str]) -> List[str]:
+    """
+    Concatenates two lists of strings.
+
+    Args:
+        list1 (List[str]): First list of strings.
+        new_answer (str): New answer to be added.
+        
+    Returns:
+        List[str]: A new list containing all elements from list1 and the new_answer.
+    """
+    return list1 + new_answer
+
+def concat_contexts(list1: List[List[Any]], new_context: List[List[Any]]) -> List[List[Any]]:
+    """
+    Concatenates two lists of lists of any type.
+
+    Args:
+        list1 (List[List[Any]]): First list of lists of any type.
+        new_context (List[Any]): New context to be added. 
+        
+    Returns:
+        List[List[Any]]: A new list containing all elements from list1 and the new_context.
+    """
+    return list1 + new_context
+
+
 # Pydantic Models For State In 
 class OverallState(BaseModel):
     """
@@ -149,10 +182,11 @@ class OverallState(BaseModel):
     Attributes:
         user_query (str): The user's input query.
         specific_collection (Optional[str]): Name of a specific collection, if any.
+        
         user_query_classification_result (Optional[UserQueryClassificationResult]): Result of user query classification.
-        queries_process_result (Optional[QueriesProcessResult]): Result of query processing.
+        query_process_result (Optional[QueryProcessResult]): Result of query processing.
         sub_queries_classification_result (Optional[SubQueriesClassificationResult]): Result of sub-queries classification.
-        topic_result (Optional[TopicResult]): Result of topic analysis.
+        search_topics_and_hyde_result (Optional[SearchTopicsAndHyDEResult]): Result of topic searching.
         detailed_search_result (Optional[DetailedSearchResult]): Result of detailed search.
         information_organization_result (str): Result of information organization.
         retrieval_result (Optional[RetrievalResult]): Result of content retrieval.
@@ -160,16 +194,20 @@ class OverallState(BaseModel):
         response_audit_result (Optional[ResponseAuditResult]): Result of response auditing.
         generation_result (str): The final generated result.
         repeat_times (int): Number of repetitions.
+        
+        dataset (Optional[pd.DataFrame]): The dataset used for processing.
+        all_results (Annotated[List[str], concat_answers]): List of all results.
+        all_contexts (Annotated[List[List[Any]], concat_contexts]): List of all contexts.
     """
     # Input
-    user_query: Optional[str] = Field(..., description="The user's input query")
+    user_query: Optional[str] = Field(None, description="The user's input query")
     specific_collection: Optional[str] = Field(None, description="Name of a specific collection, if any")
     
     # pydantic models
     user_query_classification_result: Optional[UserQueryClassificationResult] = Field(None, description="Result of user query classification")
-    queries_process_result: Optional[QueriesProcessResult] = Field(None, description="Result of query processing")
+    query_process_result: Optional[QueryProcessResult] = Field(None, description="Result of query processing")
     sub_queries_classification_result: Optional[SubQueriesClassificationResult] = None
-    topic_result: Optional[TopicResult] = None
+    search_topics_and_hyde_result: Optional[SearchTopicsAndHyDEResult] = None
     detailed_search_result: Optional[DetailedSearchResult] = None
     information_organization_result: Optional[str] = Field(None, description="Result of information organization")
     response_audit_result: Optional[ResponseAuditResult] = None
@@ -177,6 +215,11 @@ class OverallState(BaseModel):
     # Output
     generation_result: Optional[str] = Field(None, description="The final generated result")
     repeat_times: int = Field(0, description="Number of repetitions", ge=0)
+
+    # Batch Dataset Processing
+    dataset_queries: Optional[List[str]] = Field(None, description="List of queries from dataset")
+    all_results: Optional[Annotated[List[str], concat_answers]] = []
+    all_contexts: Optional[Annotated[List[List[Any]], concat_contexts]] = [[]]
 
 class SingleState(BaseModel):
     """

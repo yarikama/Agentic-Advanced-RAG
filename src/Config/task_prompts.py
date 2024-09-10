@@ -64,7 +64,7 @@ c. Decompose the transformed query into simpler sub-queries if necessary.
 
 QUERY_PROCESS_EXPECTED_OUTPUT = dedent("""
 Your output should be a Pydantic object of type QueriesProcessResult with the following structure:
-class QueriesProcessResult(BaseModel):
+class QueryProcessResult(BaseModel):
     original_query: str
     transformed_queries: Optional[List[str]]
     decomposed_queries: Optional[List[str]]
@@ -80,7 +80,7 @@ Using the query decomposition and transformation results from the context, perfo
 
 Expected context: You will receive a QueriesProcessResult object with the following structure:
 
-class QueriesProcessResult(BaseModel):
+class QueryProcessResult(BaseModel):
     original_query: str
     transformed_queries: Optional[List[str]]
     decomposed_queries: Optional[List[str]]
@@ -103,7 +103,7 @@ Using the query decomposition and transformation results from the context, perfo
 
 Expected context: You will receive a Queries object with the following structure:
 
-class QueriesProcessResult(BaseModel):
+class QueryProcessResult(BaseModel):
     original_query: str
     transformed_queries: Optional[List[str]]
     decomposed_queries: Optional[List[str]]
@@ -154,17 +154,16 @@ A RetrievalResult pydantic object containing consolidated metadata and content l
 
 # Topic Reranking Task
 TOPIC_RERANKING_PROMPT = dedent("""
-Your task is to evaluate each community's relevance to the user's query.
+Your task is to evaluate each community's relevance to the user's query or sub-queries relevant to the user's query.
 User Query: "{user_query}"
+And the sub-queries: "{sub_queries}"
 
 Your specific responsibilities are:
-1. Examine each community from the batch.
-2. Compare each community to the user's query.
-3. Assign a relevance score to each community based on how well it matches the user's query from 0 to 100.
+1. Compare each community to the user's query and sub-queries.
+2. Assign a relevance score to each community based on how well it matches the user's query and sub-queries from 0 to 100.
    - Higher scores indicate better relevance.
-   - If the community is totally irrelevant, assign a score of 0.
-4. Create a list of these relevance scores, don't include any other information.
-5. CRITICAL: Ensure the number of scores in your output list EXACTLY matches the number of communities :{batch_size} in the input.
+3. Create a list of these relevance scores, don't include any other information.
+4. CRITICAL: Ensure the number of scores in your output list EXACTLY matches the number of communities :{batch_size} in the input.
 
 You will receive a batch of {batch_size} communities in json format. 
 ----------------batch_communities----------------
@@ -190,10 +189,13 @@ class TopicRerankingResult(BaseModel):
 
 # Topic Searching Task
 TOPIC_SEARCHING_PROMPT = dedent("""
-You have received multiple pieces of community information related to a user query by descending relevance scores.
+You have received multiple pieces of community information related to a user query or sub-queries relevant to the user's query by descending relevance scores.
 
 ----------------Uesr Query----------------
 {user_query}
+
+----------------Sub-queries----------------
+{sub_queries}
 
 Your task is to analyze this information and help prepare for a vector database search to answer the user's query.
 
@@ -241,9 +243,9 @@ specific_collection = {specific_collection}
 
 You will be given a list of TopicSearchingEntity objects. Each object has the following structure:
 class TopicSearchingEntity:
-description: str
-score: int
-example_sentences: List[str]
+    description: str
+    score: int
+    example_sentences: List[str]
 Select the topics or example sentences with high scores from the TopicSearchingEntity objects. Prioritize those with higher scores as they are likely to be more relevant.
 For each selected high-scoring topic or example sentence:
 a. Use it as a query for the _retrieve tool.
@@ -274,16 +276,19 @@ A RetrievalResult pydantic object containing consolidated metadata and content l
 
 # Reranking Detail Data Task
 RERANKING_PROMPT = dedent("""
-Your task is to evaluate each retrieved data item's relevance to the user's query.
-User Query: "{user_query}"
+Your task is to evaluate each retrieved data item's relevance to the user's query or sub-queries relevant to the user's query.
+-----User Query-----
+"{user_query}"
+
+-----Sub-queries-----
+"{sub_queries}"
 
 Your specific responsibilities are:
-1. Examine each data item from the batch.
-2. Compare each data item to the user's query.
-3. Assign a relevance score to each data item based on how well it matches the user's query from 0 to 100.
+1. Compare each data item to the user's query and sub-queries.
+2. Assign a relevance score to each data item based on how well it matches the user's query from 0 to 100.
    - Higher scores indicate better relevance.
-4. Create a list of these relevance scores, don't include any other information.
-5. CRITICAL: Ensure the number of scores in your output list EXACTLY matches the number of data items :{batch_size} in the input.
+3. Create a list of these relevance scores, don't include any other information.
+4. CRITICAL: Ensure the number of scores in your output list EXACTLY matches the number of data items :{batch_size} in the input.
 
 You will receive a batch of {batch_size} data items in json format. 
 ----------------batch_retrieved_data----------------
@@ -314,6 +319,7 @@ Input:
 1. Retrieved Data: {retrieved_data}
 2. Community Information: {community_information}
 3. User Query: {user_query}
+4. Sub-queries relevant to the user's query: {sub_queries}
 
 Your tasks:
 1. Carefully review and categorize the retrieved data and community information.
@@ -352,9 +358,10 @@ However, tell the user that you don't have enough information to answer the quer
 And if there is information, analyze the reranked data and formulate a comprehensive answer to the user's query.
 
 Original user query: {user_query}
+Relevant sub-queries: {sub_queries}
 
 Your task:
-1. Review the original user query.
+1. Review the original user query and relevant sub-queries.
 2. Carefully examine the data provided by the information organizer for each sub-query.
 3. Synthesize all the information to form a coherent and comprehensive answer that addresses the original user query.
 4. Ensure that your response covers all aspects of the user's query and the derived sub-queries.

@@ -52,7 +52,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=True,
+            verbose=False
         )
         node_inputs = kwargs.get("node_inputs")
         return self.crew.kickoff(inputs=node_inputs) if node_inputs else self.crew.kickoff()
@@ -192,6 +192,9 @@ class MultiAgent_RAG:
     def sub_queries_classification_without_specification_run(self, **kwargs):
         """
         Run the sub-queries classification task without a specific collection.
+        
+        Args:
+            no args
 
         Returns:
             SubQueriesClassificationResult: A Pydantic model containing:
@@ -211,7 +214,11 @@ class MultiAgent_RAG:
 
         Args:
             **kwargs: Must include 'node_batch_inputs' (List[Dict]).
-
+            node_batch_inputs: List of Dicts containing:
+                user_query (str): The user query.
+                sub_queries (List[str]): The sub-queries.
+                batch_communities (str): The batch communities.
+                batch_size (int): The batch size.
         Returns:
             The results of the batch topic reranking task execution.
         """
@@ -228,6 +235,11 @@ class MultiAgent_RAG:
 
         Args:
             **kwargs: Must include 'node_batch_inputs' (List[Dict]).
+            node_batch_inputs: List of Dicts containing:
+                user_query (str): The user query.
+                sub_queries (List[str]): The sub-queries.
+                batch_communities (str): The batch communities.
+                batch_size (int): The batch size.
 
         Returns:
             TopicRerankingResult: A Pydantic model containing:
@@ -249,8 +261,10 @@ class MultiAgent_RAG:
         Run the topic searching task.
 
         Args:
-            **kwargs: Must include 'user_query' (str) and 'community_information' (List[str]).
-
+            **kwargs: Must include: 
+                'user_query' (str)
+                'community_information' (List[str])
+                'sub_queries' (List[str])
         Returns:
             TopicSearchingResult: A Pydantic model containing:
                 - communities_summaries (List[str]): Summaries of relevant communities.
@@ -261,7 +275,9 @@ class MultiAgent_RAG:
             node_tasks=["Topic Searching"],
             node_process="Sequential",
             node_inputs={"user_query": kwargs.get("user_query"), 
-                        "community_information": kwargs.get("community_information")}
+                        "community_information": kwargs.get("community_information"),
+                        "sub_queries": kwargs.get("sub_queries"),
+                        }
         )
         return self.tasks.create_topic_searching_task.output.pydantic
         
@@ -313,7 +329,8 @@ class MultiAgent_RAG:
             node_process="Sequential",
             node_inputs={"user_query": kwargs.get("user_query"), 
                          "retrieved_data": kwargs.get("retrieved_data"),
-                         "community_information": kwargs.get("community_information")}
+                         "community_information": kwargs.get("community_information"),
+                         "sub_queries": kwargs.get("sub_queries")}
         )
         return self.tasks.create_information_organization_task.output.raw
     
@@ -332,7 +349,8 @@ class MultiAgent_RAG:
             node_agents=["Generator"],
             node_tasks=["Generation"],
             node_process="Sequential",
-            node_inputs={"user_query": kwargs.get("user_query"),} 
+            node_inputs={"user_query": kwargs.get("user_query"),
+                         "sub_queries": kwargs.get("sub_queries")} 
         )
         return self.tasks.create_generation_task.output.raw
     

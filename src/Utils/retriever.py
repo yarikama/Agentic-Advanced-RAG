@@ -6,7 +6,11 @@ from Config import constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
 from .knowledge_graph_database import KnowledgeGraphDatabase
+from langchain_community.vectorstores import Neo4jVector
+from langchain_community.graphs import Neo4jGraph
+from langchain_openai import OpenAIEmbeddings
 from typing import List, Dict, Any, Union, Optional, Set
+import json
 load_dotenv()
 
 class Retriever:
@@ -172,8 +176,10 @@ class Retriever:
         batch_results_from_queries = self.vectordatabase.search(collection_name, dense_search_request, top_k)
         return self.deduplicate_results(batch_results_from_queries)
         
-    
-    def retrieve_all_communities(self, level: int) -> str:
+    def global_retrieve(self, level: int = const.NODE_RETRIEVAL_LEVEL) -> str:
+        """
+        This function just return all the communities in the graph database.
+        """
         community_data = self.graphdatabase.db_query(
         """
         MATCH (c:__Community__)
@@ -183,3 +189,75 @@ class Retriever:
             params={"level": level},
         )
         return community_data
+    
+    def local_retrieve(self, 
+                    query_texts: List[str],
+                    top_k: int = const.NEO4J_TOP_K,
+                    top_chunks: int = const.NEO4J_TOP_CHUNKS,
+                    top_communities: int = const.NEO4J_TOP_COMMUNITIES,
+                    top_outside_rels: int = const.NEO4J_TOP_OUTSIDE_RELS,
+                    top_inside_rels: int = const.NEO4J_TOP_INSIDE_RELS) -> Dict[str, Any]:
+    
+        # 將查詢字符串轉換為向量
+        query_vectors = self.embedder.embed_dense(query_texts)
+        result = self.graphdatabase.db_query("""
+        // 初始節點查詢
+        UNWIND $queries AS query
+        CALL db.index.vector.queryNodes('entity', $k, query) YIELD node
+        WITH COLLECT(DISTINCT node) AS nodes
+        With collect {
+            UNWIND nodes as n
+            MATCH (n)<-[:HAS_ENTITY]->(c:__Chunk__)
+            WITH c, count(distinct n) as freq
+            RETURN c.text AS chunkText
+            ORDER BY freq DESC
+            LIMIT $topChunks
+        } AS text_mapping,
+        // Entity - Report Mapping
+        collect {
+            UNWIND nodes as n
+            MATCH (n)-[:IN_COMMUNITY]->(c:__Community__)
+            WITH c, c.rank as rank, c.weight AS weight
+            RETURN c.summary 
+            ORDER BY rank, weight DESC
+            LIMIT $topCommunities
+        } AS report_mapping,
+        // Outside Relationships 
+        collect {
+            UNWIND nodes as n
+            MATCH (n)-[r:RELATED]-(m) 
+            WHERE NOT m IN nodes
+            RETURN r.description AS descriptionText
+            ORDER BY r.rank, r.weight DESC 
+            LIMIT $topOutsideRels
+        } as outsideRels,
+        // Inside Relationships 
+        collect {
+            UNWIND nodes as n
+            MATCH (n)-[r:RELATED]-(m) 
+            WHERE m IN nodes
+            RETURN r.description AS descriptionText
+            ORDER BY r.rank, r.weight DESC 
+            LIMIT $topInsideRels
+        } as insideRels,
+        // Entities description
+        collect {
+            UNWIND nodes as n
+            RETURN n.description AS descriptionText
+        } as entities
+        RETURN text_mapping, report_mapping, outsideRels, insideRels, entities
+        """,
+
+        params={
+            "queries": query_vectors,
+            "k": top_k,
+            "topChunks": top_chunks,
+            "topCommunities": top_communities,
+            "topOutsideRels": top_outside_rels,
+            "topInsideRels": top_inside_rels
+        })
+        
+        return result
+    
+    
+   

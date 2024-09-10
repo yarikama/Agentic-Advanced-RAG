@@ -1,4 +1,4 @@
-from langgraph.graph import StateGraph
+from langgraph.graph import StateGraph, END
 from .nodes import NodesModularRAG, NodesMultiAgentRAG, NodesSingleAgentRAG
 from Utils import *
 # from Frontend import *
@@ -61,16 +61,19 @@ class WorkFlowModularHybridRAG():
         nodes = NodesModularRAG()
         
         # Add nodes into the workflow
+        workflow.add_node("update_next_query_node", nodes.update_next_query_node)
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
         workflow.add_node("query_process_node", nodes.query_process_node)
-        workflow.add_node("sub_query_classification_node", nodes.sub_query_classification_node)
-        workflow.add_node("topic_search_node", nodes.topic_search_node)
+        workflow.add_node("sub_queries_classification_node", nodes.sub_queries_classification_node)
+        workflow.add_node("search_topics_and_hyde_node", nodes.search_topics_and_hyde_node)
         workflow.add_node("detailed_search_node", nodes.detailed_search_node)
         workflow.add_node("information_organization_node", nodes.information_organization_node)
         workflow.add_node("generation_node", nodes.generation_node)
+        workflow.add_node("store_result_for_ragas_node", nodes.store_result_for_ragas_node)
         
         # Draw the workflow
-        workflow.set_entry_point("user_query_classification_node")
+        workflow.set_entry_point("update_next_query_node")
+        workflow.add_edge("update_next_query_node", "user_query_classification_node")
         workflow.add_conditional_edges(
             "user_query_classification_node",
             nodes.is_retrieval_needed_cnode,
@@ -79,9 +82,9 @@ class WorkFlowModularHybridRAG():
                 "retrieval_not_needed": "generation_node",
             }
         )
-        workflow.add_edge("query_process_node", "sub_query_classification_node")
-        workflow.add_edge("sub_query_classification_node", "topic_search_node")
-        workflow.add_edge("topic_search_node", "detailed_search_node")
+        workflow.add_edge("query_process_node", "sub_queries_classification_node")
+        workflow.add_edge("sub_queries_classification_node", "search_topics_and_hyde_node")
+        workflow.add_edge("search_topics_and_hyde_node", "detailed_search_node")
         workflow.add_conditional_edges(
             "detailed_search_node",
             nodes.is_information_organization_needed_cnode,
@@ -91,8 +94,16 @@ class WorkFlowModularHybridRAG():
             }
         )
         workflow.add_edge("information_organization_node", "generation_node")
-        workflow.set_finish_point("generation_node")
-        
+        workflow.add_edge("generation_node", "store_result_for_ragas_node")
+        workflow.add_conditional_edges(
+            "store_result_for_ragas_node",
+            nodes.is_dataset_unfinished_cnode,
+            {
+                "dataset_unfinished": "update_next_query_node",
+                "dataset_finished": END
+            }
+        )
+                
         # Compile
         self.graph = workflow.compile()
         
