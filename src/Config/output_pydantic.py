@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import List, Optional, Dict, Any, Annotated
+from typing import List, Optional, Dict, Any, Annotated, Tuple
 import pandas as pd
 
 
@@ -12,9 +12,11 @@ class UserQueryClassificationResult(BaseModel):
 
     Attributes:
         needs_retrieval (bool): Indicates whether retrieval is needed.
+        domain_range_score (int): Score for the domain range.
         justification (str): Explanation for the classification decision.
     """
     needs_retrieval: bool = Field(..., description="Indicates whether retrieval is needed")
+    domain_range_score: int = Field(..., description="Score for the domain range", ge=0, le=100)
     justification: str = Field(..., description="Explanation for the classification decision")
 
 class QueryProcessResult(BaseModel):
@@ -50,7 +52,7 @@ class TopicRerankingResult(BaseModel):
     """
     relevant_scores: List[int]
     
-class TopicSearchingResult(BaseModel):
+class GlobalTopicSearchingResult(BaseModel):
     """
     Represents the result of topic searching.
 
@@ -61,17 +63,43 @@ class TopicSearchingResult(BaseModel):
     communities_summaries: List[str]
     possible_answers: List[str]
             
-class SearchTopicsAndHyDEResult(BaseModel):
+class LocalTopicSearchingResult(BaseModel):
     """
-    Represents the comprehensive result of topic analysis.
+    Represents the result of local topic analysis.
 
     Attributes:
-        communities_with_scores (Dict[str, Dict[str, Any]]): Communities with their scores and details.
+        information_summaries (List[str]): Summaries of relevant information.
+        possible_answers (List[str]): List of possible answers.
+    """
+    information_summaries: List[str]
+    possible_answers: List[str]
+    
+
+class GlobalTopicSearchingAndHyDEResult(BaseModel):
+    """
+    Represents the result of global topic analysis.
+
+    Attributes:
+        communities_with_scores (List[Tuple[str, int]]): Communities with their scores.
         communities_summaries (List[str]): Summaries of relevant communities.
         possible_answers (List[str]): List of possible answers.
     """
-    communities_with_scores: Dict[str, Dict[str, Any]]
+    communities_with_scores: List[Tuple[str, int]]
     communities_summaries: List[str]
+    possible_answers: List[str]
+                
+                
+class LocalTopicSearchingAndHyDEResult(BaseModel):
+    """
+    Represents the result of local topic analysis.
+
+    Attributes:
+        information_with_scores (List[Tuple[str, int]]): Information with their scores.
+        information_summaries (List[str]): Summaries of relevant information.
+        possible_answers (List[str]): List of possible answers.
+    """
+    information_with_scores: List[Tuple[str, int]]
+    information_summaries: List[str]
     possible_answers: List[str]
                 
 class DetailedSearchResult(BaseModel):
@@ -180,46 +208,41 @@ class OverallState(BaseModel):
     Represents the overall state of the system, including input, intermediate results, and output.
 
     Attributes:
-        user_query (str): The user's input query.
+        user_query (Optional[str]): The user's input query.
         specific_collection (Optional[str]): Name of a specific collection, if any.
-        
         user_query_classification_result (Optional[UserQueryClassificationResult]): Result of user query classification.
         query_process_result (Optional[QueryProcessResult]): Result of query processing.
         sub_queries_classification_result (Optional[SubQueriesClassificationResult]): Result of sub-queries classification.
-        search_topics_and_hyde_result (Optional[SearchTopicsAndHyDEResult]): Result of topic searching.
+        global_topic_searching_and_hyde_result (Optional[GlobalTopicSearchingAndHyDEResult]): Result of topic searching.
+        local_topic_searching_and_hyde_result (Optional[LocalTopicSearchingAndHyDEResult]): Result of topic searching.
         detailed_search_result (Optional[DetailedSearchResult]): Result of detailed search.
-        information_organization_result (str): Result of information organization.
-        retrieval_result (Optional[RetrievalResult]): Result of content retrieval.
-        rerank_result (Optional[RerankingResult]): Result of content reranking.
+        information_organization_result (Optional[str]): Result of information organization.
         response_audit_result (Optional[ResponseAuditResult]): Result of response auditing.
-        generation_result (str): The final generated result.
-        repeat_times (int): Number of repetitions.
-        
-        dataset (Optional[pd.DataFrame]): The dataset used for processing.
-        all_results (Annotated[List[str], concat_answers]): List of all results.
-        all_contexts (Annotated[List[List[Any]], concat_contexts]): List of all contexts.
+        generation_result (Optional[str]): The final generated result.
+        repeat_times (Optional[int]): Number of repetitions.
+        dataset_queries (Optional[List[str]]): List of queries from dataset.
+        all_results (Optional[List[str]]): List of all results.
+        all_contexts (Optional[List[List[Any]]]): List of all contexts.
     """
     # Input
-    user_query: Optional[str] = Field(None, description="The user's input query")
-    specific_collection: Optional[str] = Field(None, description="Name of a specific collection, if any")
-    
+    user_query:                                 Optional[str]                                = Field(None, description="The user's input query")
+    specific_collection:                        Optional[str]                                = Field(None, description="Name of a specific collection, if any")
     # pydantic models
-    user_query_classification_result: Optional[UserQueryClassificationResult] = Field(None, description="Result of user query classification")
-    query_process_result: Optional[QueryProcessResult] = Field(None, description="Result of query processing")
-    sub_queries_classification_result: Optional[SubQueriesClassificationResult] = None
-    search_topics_and_hyde_result: Optional[SearchTopicsAndHyDEResult] = None
-    detailed_search_result: Optional[DetailedSearchResult] = None
-    information_organization_result: Optional[str] = Field(None, description="Result of information organization")
-    response_audit_result: Optional[ResponseAuditResult] = None
-        
+    user_query_classification_result:           Optional[UserQueryClassificationResult]      = Field(None, description="Result of user query classification")
+    query_process_result:                       Optional[QueryProcessResult]                 = Field(None, description="Result of query processing")
+    sub_queries_classification_result:          Optional[SubQueriesClassificationResult]     = Field(None, description="Result of sub-queries classification")
+    global_topic_searching_and_hyde_result:     Optional[GlobalTopicSearchingAndHyDEResult]  = Field(None, description="Result of topic searching")
+    local_topic_searching_and_hyde_result:      Optional[LocalTopicSearchingAndHyDEResult]   = Field(None, description="Result of topic searching")
+    detailed_search_result:                     Optional[DetailedSearchResult]               = Field(None, description="Result of detailed search")
+    information_organization_result:            Optional[str]                                = Field(None, description="Result of information organization")
+    response_audit_result:                      Optional[ResponseAuditResult]                = Field(None, description="Result of response auditing")
     # Output
-    generation_result: Optional[str] = Field(None, description="The final generated result")
-    repeat_times: int = Field(0, description="Number of repetitions", ge=0)
-
+    generation_result:                          Optional[str]                                = Field(None, description="The final generated result")
+    repeat_times:                               Optional[int]                                = Field(0, description="Number of repetitions", ge=0)
     # Batch Dataset Processing
-    dataset_queries: Optional[List[str]] = Field(None, description="List of queries from dataset")
-    all_results: Optional[Annotated[List[str], concat_answers]] = []
-    all_contexts: Optional[Annotated[List[List[Any]], concat_contexts]] = [[]]
+    dataset_queries:                            Optional[List[str]]                          = Field(None, description="List of queries from dataset")
+    all_results:                                Optional[List[str]]                          = Field([], description="List of all results")
+    all_contexts:                               Optional[List[List[Any]]]                    = Field([[]], description="List of all contexts")
 
 class SingleState(BaseModel):
     """

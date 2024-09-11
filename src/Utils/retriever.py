@@ -179,12 +179,17 @@ class Retriever:
     def global_retrieve(self, level: int = const.NODE_RETRIEVAL_LEVEL) -> str:
         """
         This function just return all the communities in the graph database.
+        Args:
+            level: the level of the community to retrieve
+        Returns:
+            community_data: Dict[str, List[str]]
+                - communities: List[str]
         """
         community_data = self.graphdatabase.db_query(
         """
         MATCH (c:__Community__)
         WHERE c.level = $level
-        RETURN c.full_content AS output
+        RETURN collect(c.full_content) AS communities
         """,
             params={"level": level},
         )
@@ -195,13 +200,27 @@ class Retriever:
                     top_k: int = const.NEO4J_TOP_K,
                     top_chunks: int = const.NEO4J_TOP_CHUNKS,
                     top_communities: int = const.NEO4J_TOP_COMMUNITIES,
-                    top_outside_rels: int = const.NEO4J_TOP_OUTSIDE_RELS,
-                    top_inside_rels: int = const.NEO4J_TOP_INSIDE_RELS) -> Dict[str, Any]:
-    
-        # 將查詢字符串轉換為向量
+                    top_outside_relations: int = const.NEO4J_TOP_OUTSIDE_RELATIONS,
+                    top_inside_relations: int = const.NEO4J_TOP_INSIDE_RELATIONS) -> Dict[str, Any]:
+        """
+        This function is used to retrieve the local search results from the graph database.
+        Args:
+            query_texts: List[str] -> Input all the queries
+            top_k: int -> the number of the top k results
+            top_chunks: int -> the number of the top chunks
+            top_communities: int -> the number of the top communities
+            top_outside_relations: int -> the number of the top outside relations
+            top_inside_relations: int -> the number of the top inside relations
+        Returns:
+            result: Dict[str, List[str]]
+                - text_mapping: List[str]
+                - report_mapping: List[str]
+                - outside_relations: List[str]
+                - inside_relations: List[str]
+                - entities: List[str]
+        """    
         query_vectors = self.embedder.embed_dense(query_texts)
         result = self.graphdatabase.db_query("""
-        // 初始節點查詢
         UNWIND $queries AS query
         CALL db.index.vector.queryNodes('entity', $k, query) YIELD node
         WITH COLLECT(DISTINCT node) AS nodes
@@ -213,6 +232,7 @@ class Retriever:
             ORDER BY freq DESC
             LIMIT $topChunks
         } AS text_mapping,
+        
         // Entity - Report Mapping
         collect {
             UNWIND nodes as n
@@ -222,6 +242,7 @@ class Retriever:
             ORDER BY rank, weight DESC
             LIMIT $topCommunities
         } AS report_mapping,
+        
         // Outside Relationships 
         collect {
             UNWIND nodes as n
@@ -229,8 +250,9 @@ class Retriever:
             WHERE NOT m IN nodes
             RETURN r.description AS descriptionText
             ORDER BY r.rank, r.weight DESC 
-            LIMIT $topOutsideRels
-        } as outsideRels,
+            LIMIT $topOutsideRelations
+        } as outside_relations,
+        
         // Inside Relationships 
         collect {
             UNWIND nodes as n
@@ -238,14 +260,15 @@ class Retriever:
             WHERE m IN nodes
             RETURN r.description AS descriptionText
             ORDER BY r.rank, r.weight DESC 
-            LIMIT $topInsideRels
-        } as insideRels,
+            LIMIT $topInsideRelations
+        } as inside_relations,
+        
         // Entities description
         collect {
             UNWIND nodes as n
             RETURN n.description AS descriptionText
         } as entities
-        RETURN text_mapping, report_mapping, outsideRels, insideRels, entities
+        RETURN text_mapping, report_mapping, outside_relations, inside_relations, entities
         """,
 
         params={
@@ -253,8 +276,8 @@ class Retriever:
             "k": top_k,
             "topChunks": top_chunks,
             "topCommunities": top_communities,
-            "topOutsideRels": top_outside_rels,
-            "topInsideRels": top_inside_rels
+            "topOutsideRelations": top_outside_relations,
+            "topInsideRelations": top_inside_relations
         })
         
         return result

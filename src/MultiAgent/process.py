@@ -34,7 +34,7 @@ class MultiAgent_RAG:
         self.tools = Tools()
         self.agents = Agents(self.model_temperature, self.model_name, self.tools)
         self.tasks = Tasks(self.agents, self.tools)
-        print("LLMMA RAG System initialized")
+        print("MultiAgent RAG System initialized")
         # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
 
                 
@@ -52,7 +52,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=False
+            verbose=True,
         )
         node_inputs = kwargs.get("node_inputs")
         return self.crew.kickoff(inputs=node_inputs) if node_inputs else self.crew.kickoff()
@@ -90,7 +90,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=True,
+            verbose=False,
         )
         node_batch_inputs = kwargs.get("node_batch_inputs")
 
@@ -208,37 +208,16 @@ class MultiAgent_RAG:
         )
         return self.tasks.create_sub_queries_classification_task_without_specific_collection.output.pydantic
         
-    def topic_reranking_run_batch(self, **kwargs):
+    def global_topic_reranking_run_batch_async(self, **kwargs):
         """
-        Run the topic reranking task in batches.
+        Run the global topic reranking task asynchronously in batches.
 
         Args:
             **kwargs: Must include 'node_batch_inputs' (List[Dict]).
             node_batch_inputs: List of Dicts containing:
                 user_query (str): The user query.
-                sub_queries (List[str]): The sub-queries.
-                batch_communities (str): The batch communities.
-                batch_size (int): The batch size.
-        Returns:
-            The results of the batch topic reranking task execution.
-        """
-        return self.run_crew_batch(   
-            node_agents=["Reranker"],
-            node_tasks=["Topic Reranking"],
-            node_process="Sequential",
-            node_batch_inputs=kwargs.get("node_batch_inputs")
-        )
-        
-    def topic_reranking_run_batch_async(self, **kwargs):
-        """
-        Run the topic reranking task asynchronously in batches.
-
-        Args:
-            **kwargs: Must include 'node_batch_inputs' (List[Dict]).
-            node_batch_inputs: List of Dicts containing:
-                user_query (str): The user query.
-                sub_queries (List[str]): The sub-queries.
-                batch_communities (str): The batch communities.
+                sub_queries (Optional[List[str]]): The sub-queries.
+                batch_communities (List[str]): The batch communities.
                 batch_size (int): The batch size.
 
         Returns:
@@ -247,39 +226,92 @@ class MultiAgent_RAG:
         """
         results = self.run_crew_batch_async(   
             node_agents=["Reranker"],
-            node_tasks=["Topic Reranking"],
+            node_tasks=["Global Topic Reranking"],
             node_process="Sequential",
             node_batch_inputs=kwargs.get("node_batch_inputs")
         )
         all_scores = []
         for result in results:
-            all_scores.extend(result.pydantic.relevant_scores)
+            batch_scores = result.pydantic.relevant_scores
+            all_scores.extend(batch_scores)
         return TopicRerankingResult(relevant_scores=all_scores)
     
-    def topic_searching_run(self, **kwargs):
+    
+    def local_topic_reranking_run_batch_async(self, **kwargs):
         """
-        Run the topic searching task.
+        Run the local topic reranking task asynchronously in batches.
+
+        Args:
+            **kwargs: Must include 'node_batch_inputs' (List[Dict]).
+            node_batch_inputs: List of Dicts containing:
+                user_query (str): The user query.
+                sub_queries (Optional[List[str]]): The sub-queries.
+                batch_data (List[str]): The batch data.
+                batch_size (int): The batch size.
+
+        Returns:
+            TopicRerankingResult: A Pydantic model containing:
+                - relevant_scores (List[int]): List of relevance scores for topics.
+        """
+        results = self.run_crew_batch_async(   
+            node_agents=["Reranker"],
+            node_tasks=["Local Topic Reranking"],
+            node_process="Sequential",
+            node_batch_inputs=kwargs.get("node_batch_inputs")
+        )
+        all_scores = []
+        for result in results:
+            batch_scores = result.pydantic.relevant_scores
+            all_scores.extend(batch_scores)
+        return TopicRerankingResult(relevant_scores=all_scores)
+        
+        
+    def global_topic_searching_run(self, **kwargs):
+        """
+        Run the global topic searching task.
 
         Args:
             **kwargs: Must include: 
                 'user_query' (str)
-                'community_information' (List[str])
                 'sub_queries' (List[str])
+                'data' (List[str])
         Returns:
-            TopicSearchingResult: A Pydantic model containing:
+            GlobalTopicSearchingResult: A Pydantic model containing:
                 - communities_summaries (List[str]): Summaries of relevant communities.
                 - possible_answers (List[str]): Potential answers based on the topics.
         """
         self.run_crew(   
             node_agents=["Topic Searcher"],
-            node_tasks=["Topic Searching"],
+            node_tasks=["Global Topic Searching"],
             node_process="Sequential",
             node_inputs={"user_query": kwargs.get("user_query"), 
-                        "community_information": kwargs.get("community_information"),
                         "sub_queries": kwargs.get("sub_queries"),
+                        "data": kwargs.get("data"),
                         }
         )
-        return self.tasks.create_topic_searching_task.output.pydantic
+        return self.tasks.create_global_topic_searching_task.output.pydantic
+        
+    def local_topic_searching_run(self, **kwargs):
+        """
+        Run the local topic searching task.
+
+        Args:
+            **kwargs: Must include: 
+                'user_query' (str)
+                'sub_queries' (List[str])
+                'data' (List[str])
+        """
+        self.run_crew(   
+            node_agents=["Topic Searcher"],
+            node_tasks=["Local Topic Searching"],
+            node_process="Sequential",
+            node_inputs={"user_query": kwargs.get("user_query"), 
+                        "sub_queries": kwargs.get("sub_queries"),
+                        "data": kwargs.get("data"),
+                        }
+        )
+        return self.tasks.create_local_topic_searching_task.output.pydantic
+        
         
     # def retrieval_detail_data_from_topic_run(self, **kwargs):
     #     self.run_crew(
@@ -316,10 +348,10 @@ class MultiAgent_RAG:
     def information_organization_run(self, **kwargs):
         """
         Run the information organization task.
-
+        
         Args:
-            **kwargs: Must include 'user_query' (str), 'retrieved_data' (Dict), and 'community_information' (List[str]).
-
+            **kwargs: Must include 'user_query' (str), 'retrieved_data' (Dict), Optional 'sub_queries' (List[str]).
+            
         Returns:
             str: The organized information.
         """
@@ -329,7 +361,6 @@ class MultiAgent_RAG:
             node_process="Sequential",
             node_inputs={"user_query": kwargs.get("user_query"), 
                          "retrieved_data": kwargs.get("retrieved_data"),
-                         "community_information": kwargs.get("community_information"),
                          "sub_queries": kwargs.get("sub_queries")}
         )
         return self.tasks.create_information_organization_task.output.raw
@@ -339,7 +370,7 @@ class MultiAgent_RAG:
         Run the generation task.
 
         Args:
-            **kwargs: Must include 'user_query' (str), 'retrieval_data' (Dict), and 'community_information' (List[str]).
+            **kwargs: Must include 'user_query' (str), Optional 'sub_queries' (List[str]).
 
         Returns:
             Dict: A dictionary containing:

@@ -180,11 +180,13 @@ class KnowledgeGraphDatabase:
         # self.batched_import(cov_statement, cov_df)
         
     def db_query(self, cypher: str, params: Dict[str, Any] = {}):
-        return self.driver.execute_query(
+        result = self.driver.execute_query(
             cypher,
             parameters_=params,
             result_transformer_ = lambda result: [record.data() for record in result]  # Converts the result to a list of dicts
         )
+        return result[0]
+        
     
     def create_entity_vector_index(self):
         """
