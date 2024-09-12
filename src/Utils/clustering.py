@@ -1,13 +1,13 @@
 import pandas as pd
 import numpy as np
 import umap.umap_ as umap
-from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
-
 from sklearn.cluster import MiniBatchKMeans, DBSCAN
 from sklearn.mixture import GaussianMixture
+from sklearn.metrics.pairwise import pairwise_distances
+from hdbscan import HDBSCAN
 from lshashpy3 import LSHash
-from typing import List, Dict, Any, Union, Optional, Set
+from typing import Optional
 
 class Clustering:
     def __init__(self,
@@ -16,11 +16,11 @@ class Clustering:
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
         print("Clustering initialized")
         
-    def Clustering_result_output(self,
+    def clustering_result_output(self,
                                  collection_name: str,
                                  labels,
                                  sampling_ratio,
-                                 vectors_array,
+                                 data,
                                  method
                                  ):
         """
@@ -29,7 +29,7 @@ class Clustering:
             collection_name (str): The name of the collection.
             labels: The labels(list) of the clusters.
             sampling_ratio: The ratio used for sampling.
-            vectors_array: The array of all collection vectors.
+            data:  All vectors and contents.
             method: The clustering method.
         Returns:
             result: The final searching result for vectors ("content", "metadata").
@@ -45,53 +45,33 @@ class Clustering:
         # sample
         cluster_vectors = []
         vectors = []
+        result_df = pd.DataFrame(columns=['dense_vector','content', 'metadata'])
         count = 0
-        for cluster in np.unique(labels):
-            cluster_indices = np.where(labels == cluster)[0]
-            sample_size = int(sampling_ratio * len(cluster_indices))
-            sample_indices = np.random.choice(cluster_indices, sample_size, replace=False)
-            cluster_vectors.append(vectors_array[sample_indices])
-            vectors.extend(vectors_array[sample_indices])
-            if count <= 9:
-                print(f"   - Cluster {cluster}: {len(sample_indices)}")
-                count += 1
-            elif count == 10:
-                print('   - ...')
-                count += 1 
+        ouput_file = f'.sparse_graph_txt/{method}_search_results.txt'
+        
+        with open(ouput_file, 'w') as file:
+            for cluster in np.unique(labels):
+                cluster_indices = np.where(labels == cluster)[0]
+                sample_size = int(sampling_ratio * len(cluster_indices))
+                sample_indices = np.random.choice(cluster_indices, sample_size, replace=False)
+                cluster_vectors.append(data.loc[sample_indices,'dense_vector'].values)
+                result_df = pd.concat([result_df,data.loc[sample_indices]], ignore_index=True)
+                vectors.extend(data.loc[sample_indices,'dense_vector'])
+                if count <= 9:
+                    print(f"   - Cluster {cluster}: {len(sample_indices)}")
+                    count += 1
+                elif count == 10:
+                    print('   - ...')
+                    count += 1
+                
+                for index in sample_indices:
+                    content = data.loc[index, 'content']
+                    metadata = data.loc[index, 'metadata']
+                    file.write(f"{content}\n [{metadata}]\n")
                 
         print(f" # Number of sampling vectors : {len(vectors)} ") 
                         
-        # search result
-        result = []
-        ouput_file = f'.sparse_graph_txt/{method}_search_results.txt'
-        with open(ouput_file, 'w') as file:
-            for bucket in cluster_vectors:
-                meta_data = []
-                for v in bucket:
-                    data = []
-                    v = np.array(v)
-                    data.append(v)
-                    
-                    #search center 
-                    search_req = {
-                        "data": data,
-                        "anns_field": "dense_vector",
-                        "param": {"metric_type": "COSINE","params": {"ef": 100}},
-                        "limit": 1
-                    }
-                    search_req = AnnSearchRequest(**search_req)
-                    res = self.vectordatabase.search(
-                        collection_name=collection_name,
-                        search_request=search_req,
-                        top_k=1
-                    )
-                    
-                    result.extend(res)
-                    meta_data.append(res[0][0]['metadata'])
-    
-                    file.write(f"{res[0][0]['content']}\n [{res[0][0]['metadata']}]\n")
-                
-        return result, vectors, cluster_vectors
+        return result_df, vectors, cluster_vectors
     
     def load_collection(self, 
                         collection_name: str):
@@ -99,15 +79,14 @@ class Clustering:
         file_path = f'.parquet/{collection_name}_all_entities.parquet'
         temp_vectors = []   
         df = pd.read_parquet(file_path)
-        vector = df['dense_vector']
-        for v in vector:
+        data = df[['dense_vector', 'content','metadata']]
+        for v in data['dense_vector']:
             v = v.tolist()
             temp_vectors.append(v)
         vectors_array = np.array(temp_vectors)
+        return data, vectors_array
         
-        return vectors_array
-        
-    def Kmeans_clustering(self,
+    def kmeans_clustering(self,
                           umap_componemts=10, 
                           k_components=200, 
                           kmeans_batch_size=1000,
@@ -127,8 +106,8 @@ class Clustering:
             vectors : Only vectors (1-dim list).
             cluster_vectors : The vectors in each cluster list (2-dim list).
         """
-            
-        vectors_array = self.load_collection(collection_name)
+        
+        data, vectors_array = self.load_collection(collection_name)    
         
         # umap
         reducer = umap.UMAP(metric='cosine',n_components=umap_componemts)
@@ -138,16 +117,15 @@ class Clustering:
         kmeans = MiniBatchKMeans(n_clusters=k_components, random_state=0, batch_size=kmeans_batch_size)
         labels = kmeans.fit_predict(X_umap)
         
-        result, vectors, cluster_vectors = self.Clustering_result_output(collection_name=collection_name, 
+        result, vectors, cluster_vectors = self.clustering_result_output(collection_name=collection_name, 
                                                                          labels=labels, 
                                                                          sampling_ratio=sampling_ratio, 
-                                                                         vectors_array=vectors_array,
+                                                                         data=data,
                                                                          method='Kmeans')
                   
         return result, vectors, cluster_vectors
 
-    
-    def LSH_clustering(self,
+    def lsh_clustering(self,
                        num_layers=1, 
                        hash_size=8 , 
                        table_num=1 , 
@@ -168,48 +146,54 @@ class Clustering:
             cluster_vectors : The vectors in each cluster list (2-dim list).
         """
         
-        vectors_array = self.load_collection(collection_name)
+        data, vectors_array = self.load_collection(collection_name)
         
         # do LSH
         labels = []
         global labels_counter
         labels_counter = 0
-        def lsh_layer(vectors, current_layer):
+        def lsh_layer(vectors, current_layer, original_indices):
             global labels_counter
 
             if current_layer > num_layers:
-                return vectors  # break
+                return vectors, original_indices  # break
 
             dim = len(vectors[0])
             lsh = LSHash(hash_size=hash_size, input_dim=dim, num_hashtables=table_num)
             
             # store
             for ix, v in enumerate(vectors):
-                lsh.index(v, extra_data=str(ix))
+                lsh.index(v, extra_data=str(original_indices[ix]))
             
             next_buckets = []
+            next_indices = []
             for table in lsh.hash_tables:
                 for hash_value, bucket in table.storage.items():
                     bucket_vectors = [list(item)[0] for item in bucket]
+                    bucket_indices = [int(item[1]) for item in bucket]
                     if len(bucket_vectors) > 0:
-                        labels.extend([labels_counter] * len(bucket_vectors))
+                        labels.extend([labels_counter]*len(bucket_vectors))
                         labels_counter += 1
-                        next_buckets.extend(lsh_layer(bucket_vectors, current_layer + 1))            
-            return next_buckets
+                        next_buckets.extend(bucket_vectors)
+                        next_indices.extend(bucket_indices)
+            return lsh_layer(next_buckets, current_layer + 1, next_indices)
         
         # start LSH
-        final_buckets = lsh_layer(vectors_array, 1)
+        original_indices = list(range(len(vectors_array)))
+        final_buckets, final_indices = lsh_layer(vectors_array, 1, original_indices)
         final_buckets = np.array(final_buckets)
-    
-        result, vectors, cluster_vectors = self.Clustering_result_output(collection_name=collection_name, 
+        
+        sorted_data = data.iloc[final_indices].reset_index(drop=True)
+
+        result, vectors, cluster_vectors = self.clustering_result_output(collection_name=collection_name, 
                                                                          labels=labels, 
                                                                          sampling_ratio=sampling_ratio, 
-                                                                         vectors_array=final_buckets,
+                                                                         data=sorted_data,
                                                                          method='LSH')
                   
         return result, vectors, cluster_vectors
     
-    def GMM_clustering(self,
+    def gmm_clustering(self,
                        umap_componemts=10, 
                        gmm_components=200, 
                        sampling_ratio=0.1,
@@ -228,7 +212,7 @@ class Clustering:
             cluster_vectors : The vectors in each cluster list (2-dim list).
         """
         
-        vectors_array = self.load_collection(collection_name)
+        data, vectors_array = self.load_collection(collection_name)
         
         # umap
         reducer = umap.UMAP(metric='cosine',n_components=umap_componemts)
@@ -238,15 +222,15 @@ class Clustering:
         gmm = GaussianMixture(n_components=gmm_components)
         labels = gmm.fit_predict(X_umap)
         
-        result, vectors, cluster_vectors = self.Clustering_result_output(collection_name=collection_name, 
+        result, vectors, cluster_vectors = self.clustering_result_output(collection_name=collection_name, 
                                                                          labels=labels, 
                                                                          sampling_ratio=sampling_ratio, 
-                                                                         vectors_array=vectors_array,
+                                                                         data=data,
                                                                          method='GMM')
                   
         return result, vectors, cluster_vectors
     
-    def DBSCAN_clustering(self,
+    def dbscan_clustering(self,
                           umap_componemts=10,
                           eps=0.0001,
                           min_samples=40,
@@ -267,21 +251,60 @@ class Clustering:
             cluster_vectors : The vectors in each cluster list (2-dim list).
         """
         
-        vectors_array = self.load_collection(collection_name)
+        data, vectors_array = self.load_collection(collection_name)
         
         # umap
         reducer = umap.UMAP(metric='cosine',n_components=umap_componemts)
         X_umap = reducer.fit_transform(vectors_array) 
         
-        # GMM
+        # dbscan
         dbscan = DBSCAN(eps=eps, min_samples=min_samples, metric='cosine')
         labels = dbscan.fit_predict(X_umap)
         
-        result, vectors, cluster_vectors = self.Clustering_result_output(collection_name=collection_name, 
+        result, vectors, cluster_vectors = self.clustering_result_output(collection_name=collection_name, 
                                                                          labels=labels, 
                                                                          sampling_ratio=sampling_ratio, 
-                                                                         vectors_array=vectors_array,
+                                                                         data=data,
                                                                          method='DBSCAN')
+                  
+        return result, vectors, cluster_vectors
+    
+    def hdbscan_clustering(self,
+                           umap_componemts=10,
+                           min_cluster_size=50,
+                           sampling_ratio=0.1,
+                           collection_name: str=''):
+        """
+        Perform HDBSCAN clustering on a collection.
+        The results of content and metadata are saved in a text file.
+        Args:
+            umap_componemts (int): The number of components for UMAP dimensionality reduction.
+            min_cluster_size (int): The minimum number of samples in a cluster.
+            sampling_ratio (float): The ratio of samples to be used for clustering.
+            collection_name (str): The name of the collection.
+        Returns:
+            result: The final searching result for vectors ("content", "metadata").
+            vectors : Only vectors (1-dim list).
+            cluster_vectors : The vectors in each cluster list (2-dim list).
+        """
+        
+        data, vectors_array = self.load_collection(collection_name)
+        
+        # umap
+        reducer = umap.UMAP(metric='cosine',n_components=umap_componemts)
+        X_umap = reducer.fit_transform(vectors_array) 
+        
+        # hdbscan
+        # distance = pairwise_distances(X_umap, metric='cosine')
+        hdbscan = HDBSCAN(min_cluster_size=min_cluster_size) #, metric='precomputed'
+        # labels = hdbscan.fit_predict(distance.astype('float64'))
+        labels = hdbscan.fit_predict(X_umap)
+        
+        result, vectors, cluster_vectors = self.clustering_result_output(collection_name=collection_name, 
+                                                                         labels=labels, 
+                                                                         sampling_ratio=sampling_ratio, 
+                                                                         data=data,
+                                                                         method='HDBSCAN')
                   
         return result, vectors, cluster_vectors
     

@@ -1,13 +1,7 @@
 import pandas as pd
 from Config import constants as const
-import numpy as np
-import umap.umap_ as umap
-from sklearn.cluster import MiniBatchKMeans, DBSCAN
-from sklearn.mixture import GaussianMixture
-from lshashpy3 import LSHash
-from collections import Counter
 from typing import List, Dict, Any
-from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient, AnnSearchRequest
+from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient
 
 class VectorDatabase:
     def __init__(self, 
