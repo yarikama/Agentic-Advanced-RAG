@@ -90,7 +90,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=False,
+            verbose=True,
         )
         node_batch_inputs = kwargs.get("node_batch_inputs")
 
@@ -409,28 +409,6 @@ class MultiAgent_RAG:
     #         "result": self.tasks.create_summarizer_task.output,
     #         "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
     #     }
-    
-    # def generation_run(self):
-        # # Any update Here
-        
-        
-        # # Specific node agents and tasks
-        # node_agents = ["Generator", "Summarizer", "Response Auditor"]
-        # node_tasks = ["Generation", "Summarization", "Response Audit"]
-        
-        # # Crew with process
-        # self.crew = Crew(  
-        #     agents=self.agents.get_agents(*node_agents),
-        #     tasks=self.tasks.get_tasks(*node_tasks),
-        #     process=Process.sequential,
-        #     verbose=True,
-        #     output_log_file="logs.txt",
-        # )
-        # self.crew.kickoff()
-        # return {
-        #     "result": self.tasks.create_summarization_task.output.pydantic,
-        #     "audit_result": self.tasks.create_response_audit_task.output.pydantic,
-        # }
     
     def database_update_run(self):
         """

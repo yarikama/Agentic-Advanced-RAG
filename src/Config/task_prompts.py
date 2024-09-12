@@ -9,8 +9,9 @@ Analyze the following user query and determine if it requires information retrie
 User Query: "{user_query}"
 
 Your task is to:
-1. Classify this query as either requiring retrieval or not
-2. Evaluate the query's domain range score
+1. Classify this query as either requiring retrieval or not (Boolean value)
+2. Evaluate the query's domain range score (Integer value from 0 to 100)
+3. Provide a brief justification for your decision (String value)
 
 Consider the following guidelines:
 
@@ -29,37 +30,25 @@ Consider the following guidelines:
    - Basic concept explanations
 
 3. Domain Range Score (0-100):
-   - 0-35: Highly local or specific queries
-     • Focuses on a specific location, event, or detailed factual information
-     • Requires specialized knowledge in a niche area
-     • Do not require too much integration of minor information
-     • The answer can be found in one line of the paragraph most of the time
-     • For example: "In which month did the Titanic sink?", "Who is the author of Game of Thrones?"
-   - 36-70: Moderate scope queries
-     • Covers a few related topics
-     • Requires knowledge that's common within a particular industry or academic discipline
-     • Requires integration of minor information to form a response to the user query
-     • The answer can be found in multiple paragraphs of the article
-     • For example: "What are the key factors that contribute to the success of startups in Silicon Valley in this article?", "Why does the author choose to use first-person point of view in this article?"
-   - 71-100: Broad or global queries
-     • Addresses universal concepts or global issues  
-     • Requires integration of knowledge from various domains and multiple summaries.
-     • The concept may be found in many articles, topics or even multiple books.
-     • For example: "What is main idea of this dataset?"
-
-Additional hints for evaluating global vs. local scope:
-- Assess whether the answer would vary significantly in different parts
-- Assess whether specialized or general knowledge is required to answer the query
-- Consider if the query touches on interconnected systems or isolated incidents
-- Be aware that the query may be specific in one area however if the answer needs to be found in many articles, then the score should be higher.
-    For example: "What is the personality of Erick in the article" should be in range 36-70, because the answer can be found in many articles.
-
-Please provide:
-1. Whether retrieval is needed (boolean value):
-   - True if the query requires retrieval
-   - False if the query can be answered without retrieval
-2. Domain Range Score (integer from 0-100)
-3. Brief justification for your decision
+    0-20 points: Extremely Specific
+        Definition: Very precise questions involving a single operation or concept.
+        Example: "How do I adjust the focus on a microscope to view a cell sample?"
+        
+    21-40 points: Technical Expertise
+        Definition: Questions requiring specific domain knowledge or skills, usually with clear solutions.
+        Example: "How do I change the oil filter in a car?"
+        
+    41-60 points: Concrete Issues
+        Definition: Questions about specific problems or situations, potentially involving multiple steps or considerations.
+        Example: "How do I grow and care for tomato plants at home?"
+        
+    61-80 points: Broad Local
+        Definition: Questions involving larger local areas, requiring consideration of multiple subsystems or factors.
+        Example: "How can we improve the transportation system of a city?"
+        
+    81-100 points: Global
+        Definition: Questions about wide-ranging systemic issues, requiring consideration of multiple domains and long-term impacts.
+        Example: "How can we solve the global climate change crisis?"
 """)
 
 USER_QUERY_CLASSIFICATION_EXPECTED_OUTPUT = dedent("""

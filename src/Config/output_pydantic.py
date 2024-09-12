@@ -174,34 +174,6 @@ class ResponseAuditResult(BaseModel):
     additional_comments: Optional[str] = None
 
 
-
-def concat_answers(list1: List[str], new_answer:List[str]) -> List[str]:
-    """
-    Concatenates two lists of strings.
-
-    Args:
-        list1 (List[str]): First list of strings.
-        new_answer (str): New answer to be added.
-        
-    Returns:
-        List[str]: A new list containing all elements from list1 and the new_answer.
-    """
-    return list1 + new_answer
-
-def concat_contexts(list1: List[List[Any]], new_context: List[List[Any]]) -> List[List[Any]]:
-    """
-    Concatenates two lists of lists of any type.
-
-    Args:
-        list1 (List[List[Any]]): First list of lists of any type.
-        new_context (List[Any]): New context to be added. 
-        
-    Returns:
-        List[List[Any]]: A new list containing all elements from list1 and the new_context.
-    """
-    return list1 + new_context
-
-
 # Pydantic Models For State In 
 class OverallState(BaseModel):
     """
@@ -238,11 +210,11 @@ class OverallState(BaseModel):
     response_audit_result:                      Optional[ResponseAuditResult]                = Field(None, description="Result of response auditing")
     # Output
     generation_result:                          Optional[str]                                = Field(None, description="The final generated result")
-    repeat_times:                               Optional[int]                                = Field(0, description="Number of repetitions", ge=0)
+    repeat_times:                               Optional[int]                                = Field(0,    description="Number of repetitions", ge=0)
     # Batch Dataset Processing
     dataset_queries:                            Optional[List[str]]                          = Field(None, description="List of queries from dataset")
-    all_results:                                Optional[List[str]]                          = Field([], description="List of all results")
-    all_contexts:                               Optional[List[List[Any]]]                    = Field([[]], description="List of all contexts")
+    all_results:                                Annotated[List[str], lambda x, y: x + y]     = Field([],   description="List of all results")
+    all_contexts:                               Annotated[List[str], lambda x, y: x + y]     = Field([],   description="List of all contexts")
 
 class SingleState(BaseModel):
     """

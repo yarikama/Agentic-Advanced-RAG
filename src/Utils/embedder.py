@@ -108,3 +108,5 @@ class Embedder:
     @property
     def dense_dim(self) -> int:
         return self.dense_embedder.dim
+    
+    

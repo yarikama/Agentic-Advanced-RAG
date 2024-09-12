@@ -239,7 +239,7 @@ class Agents:
             in ranking information has given you unique insights into assessing and prioritizing 
             information based on its pertinence to a given query.
             """,
-            verbose=False,
+            verbose=True,
             llm=self.llm,
             memory=True,
             allow_delegation=False,

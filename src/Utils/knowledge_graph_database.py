@@ -39,7 +39,7 @@ class KnowledgeGraphDatabase:
         print(f'{total} rows in { time.time() - start_s} s.')    
         return total
     
-    def transform_graph_rag_to_neo4j(self, datapath: str = "artifasts"):
+    def transform_graph_rag_to_neo4j(self, datapath: str = "artifacts"):
         """ reference
         https://medium.com/towards-data-science/integrating-microsoft-graphrag-into-neo4j-e0d4fa00714c
         """
@@ -49,7 +49,7 @@ class KnowledgeGraphDatabase:
         GRAPHRAG_FOLDER = datapath
         
         # create constraints, idempotent operation
-        contraint_statements = """
+        constraint_statements = """
         create constraint chunk_id if not exists for (c:__Chunk__) require c.id is unique;
         create constraint document_id if not exists for (d:__Document__) require d.id is unique;
         create constraint entity_id if not exists for (c:__Community__) require c.community is unique;
@@ -59,10 +59,10 @@ class KnowledgeGraphDatabase:
         create constraint related_id if not exists for ()-[rel:RELATED]->() require rel.id is unique;
         """.split(";")
 
-        for contraint_statement in contraint_statements:
-            if len((contraint_statement or "").strip()) > 0:
-                print(contraint_statement)
-                self.driver.execute_query(contraint_statement)
+        for constraint_statement in constraint_statements:
+            if len((constraint_statement or "").strip()) > 0:
+                print(constraint_statement)
+                self.driver.execute_query(constraint_statement)
         
         # === Importing the GraphRAG data into Neo4j ===
         # Import documents
@@ -197,6 +197,24 @@ class KnowledgeGraphDatabase:
         """ 
         CREATE VECTOR INDEX """ + index_name + """ 
         IF NOT EXISTS FOR (e:__Entity__) ON e.description_embedding
+        OPTIONS {
+            indexConfig: {
+                `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,
+                `vector.similarity_function`: 'cosine'
+            }
+        }
+        """
+        )
+    
+    def create_community_vector_index(self):
+        """
+        Create a vector index for the community.
+        """
+        index_name = "community"
+        self.db_query(
+        """ 
+        CREATE VECTOR INDEX """ + index_name + """ 
+        IF NOT EXISTS FOR (c:__Community__) ON c.summary_embedding
         OPTIONS {
             indexConfig: {
                 `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,

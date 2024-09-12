@@ -195,7 +195,7 @@ class Retriever:
         )
         return community_data
     
-    def local_retrieve(self, 
+    def local_retrieve_entity_vector_search(self, 
                     query_texts: List[str],
                     top_k: int = const.NEO4J_TOP_K,
                     top_chunks: int = const.NEO4J_TOP_CHUNKS,
@@ -282,5 +282,63 @@ class Retriever:
         
         return result
     
+SEARCH_FROM_ENTITY_DESCRIPTION = """
+        UNWIND $queries AS query
+        WITH query, split(toLower(query), ' ') AS tokens
+        UNWIND tokens AS token
+        MATCH (n:Entity) WHERE toLower(n.name) CONTAINS token
+        WITH COLLECT(DISTINCT n) AS nodes
+        WITH collect {
+            UNWIND nodes as n
+            MATCH (n)<-[:HAS_ENTITY]-(c:__Chunk__)
+            WITH c, count(distinct n) as freq
+            RETURN c.text AS chunkText
+            ORDER BY freq DESC
+            LIMIT $topChunks
+        } AS text_mapping
+        RETURN text_mapping
+        
+        // Entity - Report Mapping
+        collect {
+            UNWIND nodes as n
+            MATCH (n)-[:IN_COMMUNITY]->(c:__Community__)
+            WITH c, c.rank as rank, c.weight AS weight
+            RETURN c.summary 
+            ORDER BY rank, weight DESC
+            LIMIT $topCommunities
+        } AS report_mapping,
+        
+        // Outside Relationships 
+        collect {
+            UNWIND nodes as n
+            MATCH (n)-[r:RELATED]-(m) 
+            WHERE NOT m IN nodes
+            RETURN r.description AS descriptionText
+            ORDER BY r.rank, r.weight DESC 
+            LIMIT $topOutsideRelations
+        } as outside_relations,
+        
+        // Inside Relationships 
+        collect {
+            UNWIND nodes as n
+            MATCH (n)-[r:RELATED]-(m) 
+            WHERE m IN nodes
+            RETURN r.description AS descriptionText
+            ORDER BY r.rank, r.weight DESC 
+            LIMIT $topInsideRelations
+        } as inside_relations,
+        
+        // Entities description
+        collect {
+            UNWIND nodes as n
+            RETURN n.description AS descriptionText
+        } as entities
+        RETURN text_mapping, report_mapping, outside_relations, inside_relations, entities
+        """
+        
+SEARCH_FROM_ENTITY_KEYWORD = """
     
-   
+
+
+
+"""

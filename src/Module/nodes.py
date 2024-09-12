@@ -139,7 +139,9 @@ class NodesModularRAG():
         entities = results["entities"]
         
         # use the results to run the topic reranking
-        all_information = chunks + communities + outside_relations + inside_relations + entities
+        all_information = list(set(chunks + communities + outside_relations + inside_relations + entities))
+        
+        print("all_information = ", all_information)
         
         # Batch the information
         batch_inputs = self.prepare_batch_input_for_reranking(
@@ -149,7 +151,7 @@ class NodesModularRAG():
         )
         
         all_scores = self.rag_system.local_topic_reranking_run_batch_async(node_batch_inputs=batch_inputs).relevant_scores
-                
+        print("all_scores = ", all_scores)
         # If the score is 0, return an empty result
         if sum(all_scores) == 0:
             return {
@@ -232,11 +234,21 @@ class NodesModularRAG():
         
     def store_result_for_ragas_node(self, state: OverallState):
         new_answer = state.generation_result
-        new_context = state.detailed_search_result.sorted_retrieved_data if state.detailed_search_result else []
-
+        new_context = state.information_organization_result if state.information_organization_result else []
         return {
+            "user_query": None,
+            "user_query_classification_result": None,
+            "query_process_result": None,
+            "sub_queries_classification_result": None,
+            "global_topic_searching_and_hyde_result": None,
+            "local_topic_searching_and_hyde_result": None,
+            "detailed_search_result": None,
+            "information_organization_result": None,
+            "response_audit_result": None,
+            "generation_result": None,
+            "repeat_times": 0,
             "all_results": [new_answer],
-            "all_contexts": [new_context]
+            "all_contexts": [new_context],
         }
         
     def repeat_count_node(self, state: OverallState):
@@ -252,10 +264,12 @@ class NodesModularRAG():
         
     # Conditional Nodes
     def is_retrieval_needed_cnode(self, state: OverallState):
-        if state.user_query_classification_result.needs_retrieval:
-            return "retrieval_needed"
-        else:
+        if not state.user_query_classification_result.needs_retrieval:
             return "retrieval_not_needed"
+        if state.user_query_classification_result.domain_range_score >= 70:
+            return "retrieval_needed_for_global_topic_searching"
+        else:
+            return "retrieval_needed_for_local_topic_searching"
         
     def is_information_organization_needed_cnode(self, state: OverallState):
         if state.detailed_search_result and state.detailed_search_result.sorted_retrieved_data:
@@ -270,9 +284,6 @@ class NodesModularRAG():
             return "restart_not_needed"
                 
     def is_dataset_unfinished_cnode(self, state: OverallState):
-        print("this is the end of the workflow")
-        print("len(state.dataset_queries) = ", len(state.dataset_queries))
-        print("len(state.all_results) = ", len(state.all_results))
         if len(state.dataset_queries) > len(state.all_results):
             return "dataset_unfinished"
         else:
