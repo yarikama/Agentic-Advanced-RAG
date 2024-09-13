@@ -20,11 +20,60 @@ class KnowledgeGraphDatabase:
             auth=(self.neo4j_username, self.neo4j_password)
         )       
         print("GraphDatabase initialized.")
+        
+    def db_query(self, cypher: str, params: Dict[str, Any] = {}) -> Dict[str, Any]:
+        """
+        Execute a Cypher query and return the result as a dictionary.
+        
+        Args:
+            cypher (str): The Cypher query to execute.
+            params (Dict[str, Any]): The parameters to pass to the query.
+                - top_k (int): The number of results to return.
+                - ...
+        Returns:
+            Dict[str, Any]: The result of the query.
+        """
+        result = self.driver.execute_query(
+            cypher,
+            parameters_=params,
+            result_transformer_ = lambda result: [record.data() for record in result]
+        )
+        return result[0]
+    
+    def delete_all_schema(self):
+        """
+        Delete all schema from the database.
+        Includes constraints, indexes, and everything that was created by apoc.
+        """
+        self.driver.execute_query("CALL apoc.schema.assert({}, {})")
+        print("All schema deleted.")
+
+    def delete_all_data(self):
+        """
+        Delete all data from the database.
+        """
+        self.driver.execute_query("MATCH (n) DETACH DELETE n")
+        print("All data deleted.")
+
+    def delete_all(self):
+        """
+        Delete all data and schema from the database.
+        """
+        self.delete_all_data()
+        self.delete_all_schema()
+        print("All data and schema deleted.")
     
     def batched_import(self, statement, df, batch_size=1000):
         """
         Import a dataframe into Neo4j using a batched approach.
-        Parameters: statement is the Cypher query to execute, df is the dataframe to import, and batch_size is the number of rows to import in each batch.
+        
+        Args:
+            statement (str): The Cypher statement to execute.
+            df (pd.DataFrame): The dataframe to import.
+            batch_size (int): The number of rows to import in each batch.
+            
+        Returns:
+            int: The number of rows imported.
         """
         total = len(df)
         start_s = time.time()
@@ -39,164 +88,197 @@ class KnowledgeGraphDatabase:
         print(f'{total} rows in { time.time() - start_s} s.')    
         return total
     
-    def transform_graph_rag_to_neo4j(self, datapath: str = "artifacts"):
-        """ reference
-        https://medium.com/towards-data-science/integrating-microsoft-graphrag-into-neo4j-e0d4fa00714c
+    def create_constraints(self):
         """
-
-        
-        # From the output of Graph RAG
-        GRAPHRAG_FOLDER = datapath
-        
-        # create constraints, idempotent operation
+        Create constraints for the transformation between graph_rag and neo4j to ensure uniqueness.
+        There are 7 constraints in total.
+        - chunk_id
+        - document_id
+        - community_id
+        - entity_id
+        - entity_name
+        - covariate_title
+        - relationship_id
+        """
         constraint_statements = """
-        create constraint chunk_id if not exists for (c:__Chunk__) require c.id is unique;
-        create constraint document_id if not exists for (d:__Document__) require d.id is unique;
-        create constraint entity_id if not exists for (c:__Community__) require c.community is unique;
-        create constraint entity_id if not exists for (e:__Entity__) require e.id is unique;
-        create constraint entity_title if not exists for (e:__Entity__) require e.name is unique;
-        create constraint entity_title if not exists for (e:__Covariate__) require e.title is unique;
-        create constraint related_id if not exists for ()-[rel:RELATED]->() require rel.id is unique;
+        create constraint chunk_id          if not exists for (chunk:__Chunk__)                 require chunk.id            is unique;
+        create constraint document_id       if not exists for (document:__Document__)           require document.id         is unique;
+        create constraint community_id      if not exists for (community:__Community__)         require community.id        is unique;
+        create constraint entity_id         if not exists for (entity:__Entity__)               require entity.id           is unique;
+        create constraint entity_name       if not exists for (entity:__Entity__)               require entity.name         is unique;
+        create constraint covariate_title   if not exists for (covariate:__Covariate__)         require covariate.title     is unique;
+        create constraint relationship_id   if not exists for ()-[relationship:RELATED]->()     require relationship.id     is unique;
         """.split(";")
 
         for constraint_statement in constraint_statements:
             if len((constraint_statement or "").strip()) > 0:
                 print(constraint_statement)
                 self.driver.execute_query(constraint_statement)
-        
-        # === Importing the GraphRAG data into Neo4j ===
-        # Import documents
-        doc_df = pd.read_parquet(
-            f'{GRAPHRAG_FOLDER}/create_final_documents.parquet', 
-            columns=["id", "title"])
-        doc_df.head(2)
-        
-        doc_statement = """
-        MERGE (d:__Document__ {id:value.id})
-        SET d += value {.title}
+                
+        print("Constraints created.")
+    
+    def transform_graph_rag_to_neo4j(self, data_path: str = "artifacts"):
         """
-        self.batched_import(doc_statement, doc_df)
+        ref:    https://medium.com/towards-data-science/integrating-microsoft-graphrag-into-neo4j-e0d4fa00714c
+        """
+        self.create_constraints()
+        self.import_all_data(data_path)
+        self.create_vector_indexes()
+        self.create_community_weight()
+
+    def import_documents(self, data_path):
+        document_df = pd.read_parquet(f'{data_path}/create_final_documents.parquet')
+        print("Documents DataFrame head:")
+        print(document_df.head(2))
         
-        # Import text units
-        text_df = pd.read_parquet(
-                f'{GRAPHRAG_FOLDER}/create_final_text_units.parquet',
-                columns=["id","text","n_tokens","document_ids"])
-        text_df.head(2)
+        document_statement = """
+        // SET DOCUMENT AND ITS PROPERTIES
+        MERGE (document:__Document__ {id:value.id})
+        SET document += value {.title, .raw_content}
+        """
+        self.batched_import(document_statement, document_df)
+
+    def import_text_units(self, data_path):
+        text_df = pd.read_parquet(f'{data_path}/create_final_text_units.parquet')
+        print("Text Units DataFrame head:")
+        print(text_df.head(2))
         
         text_statement = """
-        MERGE (c:__Chunk__ {id:value.id})
-        SET c += value {.text, .n_tokens}
-        WITH c, value
-        UNWIND value.document_ids AS document
-        MATCH (d:__Document__ {id:document})
-        MERGE (c)-[:PART_OF]->(d)
+        // SET CHUNK AND ITS PROPERTIES
+        MERGE (chunk:__Chunk__ {id:value.id})
+        SET chunk += value {.text, .n_tokens}
+        
+        // ADD RELATIONSHIPS BETWEEN CHUNKS AND DOCUMENTS
+        WITH chunk, value
+        UNWIND value.document_ids AS document_id
+        MATCH (document:__Document__ {id:document_id})
+        MERGE (chunk)-[:PART_OF]->(document)
         """
         self.batched_import(text_statement, text_df)
-        
-        
-        # Import Nodes
-        entity_df = pd.read_parquet(
-            f'{GRAPHRAG_FOLDER}/create_final_entities.parquet',
-            columns=["name","type","description","human_readable_id","id","description_embedding","text_unit_ids"])
-        entity_df.head(2)
+
+    def import_entities(self, data_path):
+        entity_df = pd.read_parquet(f'{data_path}/create_final_entities.parquet')
+        print("Entities DataFrame head:")
+        print(entity_df.head(2))
         
         entity_statement = """
-        MERGE (e:__Entity__ {id:value.id})
-        SET e += value {.human_readable_id, .description, name:replace(value.name,'"','')}
-        WITH e, value
-        CALL db.create.setNodeVectorProperty(e, "description_embedding", value.description_embedding)
-        CALL apoc.create.addLabels(e, case when coalesce(value.type,"") = "" then [] else [apoc.text.upperCamelCase(replace(value.type,'"',''))] end) yield node
-        UNWIND value.text_unit_ids AS text_unit
-        MATCH (c:__Chunk__ {id:text_unit})
-        MERGE (c)-[:HAS_ENTITY]->(e)
+        // SET ENTITY AND ITS PROPERTIES
+        MERGE (entity:__Entity__ {id:value.id})
+        SET entity += value {.human_readable_id, .description, name:replace(value.name,'"','')}
+        
+        // ADD VECTOR PROPERTY TO ENTITY
+        WITH entity, value
+        CALL db.create.setNodeVectorProperty(entity, "description_embedding", value.description_embedding)
+        CALL apoc.create.addLabels(entity, case when coalesce(value.type,"") = "" then [] else [apoc.text.upperCamelCase(replace(value.type,'"',''))] end) yield node
+        
+        // ADD RELATIONSHIPS BETWEEN CHUNKS AND ENTITIES
+        UNWIND value.text_unit_ids AS text_unit_id
+        MATCH (chunk:__Chunk__ {id:text_unit_id})
+        MERGE (chunk)-[:HAS_ENTITY]->(entity)
         """
         self.batched_import(entity_statement, entity_df)
+
+    def import_relationships(self, data_path):
+        relationship_df = pd.read_parquet(f'{data_path}/create_final_relationships.parquet')
+        print("Relationships DataFrame head:")
+        print(relationship_df.head(2))
         
-        # Import Relationships
-        rel_df = pd.read_parquet(
-            f'{GRAPHRAG_FOLDER}/create_final_relationships.parquet',
-            columns=["source","target","id","rank","weight","human_readable_id","description","text_unit_ids"])
-        rel_df.head(2)
-        rel_statement = """
-        MATCH (source:__Entity__ {name:replace(value.source,'"','')})
-        MATCH (target:__Entity__ {name:replace(value.target,'"','')})
-        // not necessary to merge on id as there is only one relationship per pair
-        MERGE (source)-[rel:RELATED {id: value.id}]->(target)
-        SET rel += value {.rank, .weight, .human_readable_id, .description, .text_unit_ids}
-        RETURN count(*) as createdRels
+        relationship_statement = """
+        // SET RELATIONSHIP AND ITS PROPERTIES
+        MATCH (source_entity:__Entity__ {name:replace(value.source,'"','')})
+        MATCH (target_entity:__Entity__ {name:replace(value.target,'"','')})
+        MERGE (source_entity)-[relationship:RELATED {id: value.id}]->(target_entity)
+        SET relationship += value {.rank, .weight, .human_readable_id, .description, .text_unit_ids}
+        
+        // ADD VECTOR PROPERTY TO RELATIONSHIP
+        WITH relationship, value
+        CALL db.create.setRelationshipVectorProperty(relationship, "description_embedding", value.description_embedding)
+        RETURN count(*) as createdRelationships
         """
-        self.batched_import(rel_statement, rel_df)
+        self.batched_import(relationship_statement, relationship_df)
+
+    def import_communities(self, data_path):
+        community_df = pd.read_parquet(f'{data_path}/create_final_communities.parquet')
+        print("Communities DataFrame head:")
+        print(community_df.head(2))
         
-        # import Communities
-        community_df = pd.read_parquet(
-            f'{GRAPHRAG_FOLDER}/create_final_communities.parquet', 
-            columns=["id","level","title","text_unit_ids","relationship_ids"])
-        community_df.head(2) 
         community_statement = """
-        MERGE (c:__Community__ {community:value.id})
-        SET c += value {.level, .title}
-        /*
-        UNWIND value.text_unit_ids as text_unit_id
-        MATCH (t:__Chunk__ {id:text_unit_id})
-        MERGE (c)-[:HAS_CHUNK]->(t)
-        WITH distinct c, value
-        */
+        // SET COMMUNITY AND ITS PROPERTIES
+        MERGE (community:__Community__ {id:value.id})
+        SET community += value {.level, .title}
+        
+        // ADD RELATIONSHIPS BETWEEN CHUNKS AND COMMUNITIES
         WITH *
-        UNWIND value.relationship_ids as rel_id
-        MATCH (start:__Entity__)-[:RELATED {id:rel_id}]->(end:__Entity__)
-        MERGE (start)-[:IN_COMMUNITY]->(c)
-        MERGE (end)-[:IN_COMMUNITY]->(c)
-        RETURN count(distinct c) as createdCommunities
+        UNWIND value.text_unit_ids as text_unit_id
+        MATCH (chunk:__Chunk__ {id:text_unit_id})
+        MERGE (community)-[:HAS_CHUNK]->(chunk)
+        
+        // SET RELATIONSHIPS BETWEEN ENTITIES AND COMMUNITIES
+        WITH *
+        UNWIND value.relationship_ids as relationship_id
+        MATCH (source_entity:__Entity__)-[:RELATED {id:relationship_id}]->(target_entity:__Entity__)
+        MERGE (source_entity)-[:IN_COMMUNITY]->(community)
+        MERGE (target_entity)-[:IN_COMMUNITY]->(community)
+        RETURN count(distinct community) as createdCommunities
         """
         self.batched_import(community_statement, community_df)
+
+    def import_community_reports(self, data_path):
+        community_report_df = pd.read_parquet(f'{data_path}/create_final_community_reports.parquet')
+        print("Community Reports DataFrame head:")
+        print(community_report_df.head(2))
         
-        # Import Community Reports
-        community_report_df = pd.read_parquet(
-            f'{GRAPHRAG_FOLDER}/create_final_community_reports.parquet',
-            columns=["id","community","level","title","summary", "findings","rank","rank_explanation","full_content"])
-        community_report_df.head(2)
         community_report_statement = """
-        MERGE (c:__Community__ {community:value.community})
-        SET c += value {.level, .title, .rank, .rank_explanation, .full_content, .summary}
-        WITH c, value
+        // SET COMMUNITY REPORT AND ITS PROPERTIES
+        MERGE (community:__Community__ {id:value.community})
+        SET community += value {.level, .title, .rank, .rank_explanation, .full_content, .summary}
+        
+        // ADD VECTOR PROPERTY TO COMMUNITY REPORT
+        WITH community, value
+        CALL db.create.setNodeVectorProperty(community, "summary_embedding", value.summary_embedding)
+        
+        // ADD RELATIONSHIPS BETWEEN COMMUNITIES AND FINDINGS
+        WITH community, value
         UNWIND range(0, size(value.findings)-1) AS finding_idx
-        WITH c, value, finding_idx, value.findings[finding_idx] as finding
-        MERGE (c)-[:HAS_FINDING]->(f:Finding {id:finding_idx})
-        SET f += finding
+        WITH community, value, finding_idx, value.findings[finding_idx] as value_finding
+        MERGE (community)-[:HAS_FINDING]->(finding:Finding {id:finding_idx})
+        SET finding += value_finding
         """
         self.batched_import(community_report_statement, community_report_df)
+
+    def import_covariates(self, data_path):
+        covariate_df = pd.read_parquet(f'{data_path}/create_final_covariates.parquet')
+        print("Covariates DataFrame head:")
+        print(covariate_df.head(2))
         
-        # Import Covariates
-        # cov_df = pd.read_parquet(f'{GRAPHRAG_FOLDER}/create_final_covariates.parquet')
-        # cov_df.head(2)
+        covariate_statement = """
+        MERGE (covariate:__Covariate__ {id:value.id})
+        SET covariate += apoc.map.clean(value, ["text_unit_id", "document_ids", "n_tokens"], [NULL, ""])
+        WITH covariate, value
+        MATCH (chunk:__Chunk__ {id: value.text_unit_id})
+        MERGE (chunk)-[:HAS_COVARIATE]->(covariate)
+        """
+        self.batched_import(covariate_statement, covariate_df)
+
+    def import_all_data(self, data_path):
+        self.import_documents(data_path)
+        self.import_text_units(data_path)
+        self.import_entities(data_path)
+        self.import_relationships(data_path)
+        self.import_communities(data_path)
+        self.import_community_reports(data_path)
+        # self.import_covariates(data_path)
+        print("All data imported.")
         
-        # cov_statement = """
-        # MERGE (c:__Covariate__ {id:value.id})
-        # SET c += apoc.map.clean(value, ["text_unit_id", "document_ids", "n_tokens"], [NULL, ""])
-        # WITH c, value
-        # MATCH (ch:__Chunk__ {id: value.text_unit_id})
-        # MERGE (ch)-[:HAS_COVARIATE]->(c)
-        # """
-        # self.batched_import(cov_statement, cov_df)
-        
-    def db_query(self, cypher: str, params: Dict[str, Any] = {}):
-        result = self.driver.execute_query(
-            cypher,
-            parameters_=params,
-            result_transformer_ = lambda result: [record.data() for record in result]  # Converts the result to a list of dicts
-        )
-        return result[0]
-        
-    
-    def create_entity_vector_index(self):
+
+    def create_entity_description_vector_index(self):
         """
         Create a vector index for the entity.
         """
         index_name = "entity"
-        self.db_query(
-        """ 
+        self.driver.execute_query(""" 
         CREATE VECTOR INDEX """ + index_name + """ 
-        IF NOT EXISTS FOR (e:__Entity__) ON e.description_embedding
+        IF NOT EXISTS FOR (entity:__Entity__) ON entity.description_embedding
         OPTIONS {
             indexConfig: {
                 `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,
@@ -205,16 +287,34 @@ class KnowledgeGraphDatabase:
         }
         """
         )
+        print("Entity description vector index created.")
     
-    def create_community_vector_index(self):
+    def create_relationship_description_vector_index(self):
+        """
+        Create a vector index for the relationship.
+        """
+        index_name = "relationship"
+        self.driver.execute_query(""" 
+        CREATE VECTOR INDEX """ + index_name + """ 
+        IF NOT EXISTS FOR (relationship:__Relationship__) ON relationship.description_embedding
+        OPTIONS {
+            indexConfig: {
+                `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,
+                `vector.similarity_function`: 'cosine'
+            }
+        }
+        """
+        )
+        print("Relationship description vector index created.")
+        
+    def create_community_summary_vector_index(self):
         """
         Create a vector index for the community.
         """
         index_name = "community"
-        self.db_query(
-        """ 
+        self.driver.execute_query(""" 
         CREATE VECTOR INDEX """ + index_name + """ 
-        IF NOT EXISTS FOR (c:__Community__) ON c.summary_embedding
+        IF NOT EXISTS FOR (community:__Community__) ON community.summary_embedding
         OPTIONS {
             indexConfig: {
                 `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,
@@ -223,15 +323,24 @@ class KnowledgeGraphDatabase:
         }
         """
         )
+        print("Community summary vector index created.")
+        
+    def create_vector_indexes(self):
+        """
+        Create all vector indexes for the database.
+        """
+        self.create_entity_description_vector_index()
+        self.create_relationship_description_vector_index()
+        self.create_community_summary_vector_index()
         
     def create_community_weight(self):
         """
         Create a weight for the community.
         """
-        self.db_query(
+        self.driver.execute_query(
         """
-        MATCH (n:`__Community__`)<-[:IN_COMMUNITY]-()<-[:HAS_ENTITY]-(c)
-        WITH n, count(distinct c) AS chunkCount
-        SET n.weight = chunkCount
+        MATCH (community:`__Community__`)<-[:IN_COMMUNITY]-()<-[:HAS_ENTITY]-(chunk)
+        WITH community, count(distinct chunk) AS chunkCount
+        SET community.weight = chunkCount
         """
         )
