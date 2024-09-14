@@ -131,7 +131,7 @@ class NodesModularRAG():
         # judge the top_k, top_community, top_inside_relations from the score
         
         # get the results from the local retriever
-        results = self.retriever.local_retrieve([state.user_query])
+        results = self.retriever.local_retrieve_relationship_vector_search([state.user_query])
         chunks = results["chunks"]
         communities = results["communities"]
         outside_relations = results["outside_relations"]

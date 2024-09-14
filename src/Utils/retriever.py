@@ -426,11 +426,11 @@ class Retriever:
             top_relationships: int -> the number of the top relationships
         Returns:
             result: Dict[str, List[str]]
-                - relationship_descriptions: List[str]
-                - chunk_texts: List[str]
-                - community_summaries: List[str]
                 - entity_descriptions: List[str]
                 - entity_names: List[str]
+                - relationship_descriptions: List[str]
+                - community_summaries: List[str]
+                - chunks_texts: List[str]
         """    
         queries_vectors = self.embedder.embed_dense(query_texts)
         result = self.graphdatabase.dictionary_query_result("""
@@ -508,3 +508,41 @@ class Retriever:
         
         return result
     
+    def local_retrieve_community_vector_search(self, 
+                                                query_texts: List[str],
+                                                top_communities: int = const.NEO4J_TOP_COMMUNITIES,
+                                              ) -> Dict[str, Any]:
+        """
+        This function is used to retrieve the local search results from the graph database.
+        Args:
+            query_texts: List[str] -> Input all the queries
+            top_communities: int -> the number of the top communities
+            top_chunks: int -> the number of the top chunks
+            top_entities: int -> the number of the top entities
+            top_relationships: int -> the number of the top relationships
+        Returns:
+            result: Dict[str, List[str]]
+                - community_summaries: List[str]
+                
+        """     
+        
+        queries_vectors = self.embedder.embed_dense(query_texts)
+        result = self.graphdatabase.dictionary_query_result("""
+        // Using the query vectors to retrieve the communities
+        UNWIND $queries_vectors AS query_vector
+        CALL db.index.vector.queryNodes('community_summary_vector_index', $topCommunities, query_vector) YIELD node
+        WITH COLLECT(DISTINCT node) AS retrieved_communities
+        WITH COLLECT {
+            UNWIND retrieved_communities as community
+            RETURN community.summary AS communitySummary
+            ORDER BY community.rank DESC
+        } AS community_summaries
+        RETURN community_summaries
+        """, 
+        params={
+            "queries_vectors": queries_vectors,
+            "topCommunities": top_communities,
+        })
+
+        return result
+               
