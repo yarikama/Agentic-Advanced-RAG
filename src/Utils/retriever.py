@@ -455,74 +455,49 @@ class Retriever:
             WITH entity, all_relationship
             WHERE all_relationship IN retrieved_relationships
             WITH entity, COUNT(all_relationship) AS freq
-            WHERE entity.description IS NOT NULL AND entity.description <> ''
-            RETURN entity.description AS descriptionText
+            RETURN entity
             ORDER BY freq DESC
             LIMIT $topEntities
+        } AS entities, retrieved_relationships
+        
+        WITH *
+        WITH COLLECT {
+            UNWIND entities as entity
+            WITH entity
+            WHERE entity.description IS NOT NULL AND entity.description <> ''
+            RETURN entity.description AS descriptionText
         } AS entity_descriptions,
         
         COLLECT {
-            UNWIND retrieved_relationships as relationship
-            MATCH (entity)<-[relationship:RELATED]->()
-            WITH DISTINCT entity
-            MATCH (entity)<-[all_relationship:RELATED]-()
-            WITH entity, all_relationship
-            WHERE all_relationship IN retrieved_relationships
-            WITH entity, COUNT(all_relationship) AS freq
+            UNWIND entities as entity
+            WITH entity
             WHERE entity.name IS NOT NULL AND entity.name <> ''
             RETURN entity.name AS name
-            ORDER BY freq DESC
-            LIMIT $topEntities
-        } AS entity_names
+        } AS entity_names, 
         
-        RETURN relationship_descriptions, entity_descriptions, entity_names
+        COLLECT {
+            UNWIND entities as entity
+            MATCH (entity)<-[:HAS_ENTITY]->(chunk:__Chunk__)
+            WITH chunk, count(distinct entity) as freq
+            WITH DISTINCT {chunkText: chunk.text, freq: freq} AS chunkFreqPair
+            WHERE chunkFreqPair.chunkText IS NOT NULL AND chunkFreqPair.chunkText <> ''
+            RETURN chunkFreqPair.chunkText AS chunkText
+            ORDER BY chunkFreqPair.freq DESC
+            LIMIT $topChunks
+        } AS chunks_texts,
+        
+        COLLECT {
+            UNWIND entities as entity
+            MATCH (entity)-[:IN_COMMUNITY]->(community:__Community__)
+            WITH DISTINCT {communitySummary: community.summary, rank: community.rank, weight: community.weight} AS communityRankWeightPair
+            WHERE communityRankWeightPair.communitySummary IS NOT NULL AND communityRankWeightPair.communitySummary <> ''
+            RETURN communityRankWeightPair.communitySummary
+            ORDER BY communityRankWeightPair.rank, communityRankWeightPair.weight DESC
+            LIMIT $topCommunities
+        } AS community_summaries, relationship_descriptions
+        
+        RETURN entity_descriptions, entity_names, relationship_descriptions, community_summaries, chunks_texts
         """, 
-    #     // Entity - Report Mapping
-    #     COLLECT {
-    #         UNWIND retrieved_entities as entity
-    #         MATCH (entity)-[:IN_COMMUNITY]->(community:__Community__)
-    #         WITH DISTINCT {communitySummary: community.summary, rank: community.rank, weight: community.weight} AS communityRankWeightPair
-    #         RETURN communityRankWeightPair.communitySummary
-    #         ORDER BY communityRankWeightPair.rank, communityRankWeightPair.weight DESC
-    #         LIMIT $topCommunities
-    #     } AS communities,
-        
-    #     // Inside Relationships 
-    #     COLLECT {
-    #         UNWIND retrieved_entities as inside_entity
-    #         MATCH (inside_entity_1)-[inside_relationship:RELATED]-(inside_entity_2) 
-    #         WHERE inside_entity_2 IN retrieved_entities
-    #         WITH DISTINCT {descriptionText: inside_relationship.description, rank: inside_relationship.rank, weight: inside_relationship.weight} AS inside_relationship_rank_weight_pair
-    #         RETURN inside_relationship_rank_weight_pair.descriptionText
-    #         ORDER BY inside_relationship_rank_weight_pair.rank, inside_relationship_rank_weight_pair.weight DESC 
-    #         LIMIT $topInsideRelations
-    #     } as inside_relations,
-        
-    #     // Outside Relationships 
-    #     COLLECT {
-    #         UNWIND retrieved_entities as inside_entity
-    #         MATCH (inside_entity)-[outside_relationship:RELATED]-(outside_entity) 
-    #         WHERE NOT outside_entity IN retrieved_entities
-    #         WITH DISTINCT {descriptionText: outside_relationship.description, rank: outside_relationship.rank, weight: outside_relationship.weight} AS outside_relationship_rank_weight_pair
-    #         RETURN outside_relationship_rank_weight_pair.descriptionText
-    #         ORDER BY outside_relationship_rank_weight_pair.rank, outside_relationship_rank_weight_pair.weight DESC 
-    #         LIMIT $topOutsideRelations
-    #     } as outside_relations,
-        
-    #     // Entities description
-    #     COLLECT {
-    #         UNWIND retrieved_entities as entity
-    #         RETURN entity.description AS descriptionText
-    #     } as entities_description,
-        
-    #     // Entities name
-    #     COLLECT {
-    #         UNWIND retrieved_entities as entity
-    #         RETURN entity.name AS name
-    #     } as entities_name
-        
-    #     RETURN entities_name, entities_description, chunks, communities, inside_relations, outside_relations
-    #     """, 
         params={
             "queries_vectors": queries_vectors,
             "topEntities": top_entities,
