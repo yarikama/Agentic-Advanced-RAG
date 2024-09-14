@@ -176,17 +176,14 @@ class NodesModularRAG():
         
         # get the results from the local retriever
         results = self.retriever.local_retrieve_relationship_vector_search([state.user_query])
-        chunks = results["chunks"]
-        communities = results["communities"]
-        outside_relations = results["outside_relations"]
-        inside_relations = results["inside_relations"]
-        entities_description = results["entities_description"]
+        entity_descriptions = results["entity_descriptions"]
+        chunks_texts = results["chunks_texts"]
+        community_summaries = results["community_summaries"]
+        relationship_descriptions = results["relationship_descriptions"]
         
         # use the results to run the topic reranking
-        all_information = list(set(chunks + communities + outside_relations + inside_relations + entities_description))
+        all_information = list(set(chunks_texts + community_summaries + entity_descriptions + relationship_descriptions))
 
-        print("all_information = ", all_information)
-        
         # Batch the information
         batch_inputs = self.prepare_batch_input_for_reranking(
             input_list=all_information,
@@ -195,7 +192,7 @@ class NodesModularRAG():
         )
         
         all_scores = self.rag_system.local_topic_reranking_run_batch_async(node_batch_inputs=batch_inputs).relevant_scores
-        print("all_scores = ", all_scores)
+
         # If the score is 0, return an empty result
         if sum(all_scores) == 0:
             return {
@@ -207,7 +204,7 @@ class NodesModularRAG():
             }
         
         # Filter the information with the score
-        sorted_information, sorted_information_with_scores = self.aaa(all_information, all_scores)
+        sorted_information, sorted_information_with_scores = self.sort_data_desc_and_filter_0_score(all_information, all_scores)
         
         # after reranking, do topic searching for HyDE
         local_topic_searching_results = self.rag_system.local_topic_searching_run(
