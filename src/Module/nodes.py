@@ -8,6 +8,7 @@ from Config.constants import *
 from pandas import DataFrame
 import json
 import pandas as pd
+from statistics import median
 
 class NodesModularRAG():
     def __init__(self):
@@ -45,7 +46,33 @@ class NodesModularRAG():
             })
         return batches
     
-    def sort_data_desc_and_filter_by_score(self, data: List[str], scores: List[int])-> Tuple[List[str], List[Tuple[str, int]]]:
+    def sort_two_descending_list(self, list1: List[Tuple[str, int]], list2: List[Tuple[str, int]])-> List[Tuple[str, int]]:
+        """
+        This function is used to sort the two lists in descending order.
+        args:
+            list1: List[Tuple[str, int]]: the list of data to be sorted
+            list2: List[Tuple[str, int]]: the list of scores
+        returns:
+            sorted_list: List[Tuple[str, int]]: the list of data with scores in descending order
+        """
+        if len(list1) == 0:
+            return list2
+        if len(list2) == 0:
+            return list1
+        result = []
+        i, j = 0, 0
+        while i < len(list1) and j < len(list2):
+            if list1[i][1] > list2[j][1]:
+                result.append(list1[i])
+                i += 1
+            else:
+                result.append(list2[j])
+                j += 1
+        result.extend(list1[i:])
+        result.extend(list2[j:])
+        return result
+    
+    def sort_data_desc_and_filter_0_score(self, data: List[str], scores: List[int])-> Tuple[List[str], List[Tuple[str, int]]]:
         """
         This function is used to sort the data in descending order and filter the data by the score.
         args:
@@ -57,6 +84,23 @@ class NodesModularRAG():
         """
         assert len(data) == len(scores), "The number of data and scores must match, len(data) = %d, len(scores) = %d" % (len(data), len(scores))
         filtered_data_with_scores = [(data, score) for data, score in zip(data, scores) if score > 0]
+        sorted_data_with_scores = sorted(filtered_data_with_scores, key=lambda x: x[1], reverse=True)
+        sorted_data = [data for data, _ in sorted_data_with_scores]
+        return sorted_data, sorted_data_with_scores
+    
+    def sort_data_desc_and_filter_median_score(self, data: List[str], scores: List[int])-> Tuple[List[str], List[Tuple[str, int]]]:
+        """
+        This function is used to sort the data in descending order and filter the data under the median score.
+        args:
+            data: List[str]: the list of data to be sorted
+            scores: List[int]: the list of scores
+        returns:
+            sorted_data: List[str]: the list of data sorted in descending order
+            sorted_data_with_scores: List[Tuple[str, int]]: the list of data with scores in descending order
+        """
+        assert len(data) == len(scores), "The number of data and scores must match, len(data) = %d, len(scores) = %d" % (len(data), len(scores))
+        score_median = median(scores)
+        filtered_data_with_scores = [(data, score) for data, score in zip(data, scores) if score > score_median]
         sorted_data_with_scores = sorted(filtered_data_with_scores, key=lambda x: x[1], reverse=True)
         sorted_data = [data for data, _ in sorted_data_with_scores]
         return sorted_data, sorted_data_with_scores
@@ -91,7 +135,7 @@ class NodesModularRAG():
             
     def global_topic_searching_and_hyde_node(self, state: OverallState):
         # Iterate all community
-        all_communities = self.retriever.global_retrieve(self.global_retrieval_level)["communities"]
+        all_communities = self.retriever.global_retrieve(self.global_retrieval_level)["community_summaries"]
         
         # Assign the community to the agents
         batch_inputs = self.prepare_batch_input_for_reranking(
@@ -104,13 +148,13 @@ class NodesModularRAG():
         if sum(all_scores) == 0:
             return {
                 "global_topic_searching_and_hyde_result": GlobalTopicSearchingAndHyDEResult(
-                    communities_with_scores = {},
+                    communities_with_scores = [],
                     communities_summaries = [],
                     possible_answers = [],
                 )
             }        
             
-        sorted_communities, sorted_communities_with_scores = self.sort_data_desc_and_filter_by_score(all_communities, all_scores)
+        sorted_communities, sorted_communities_with_scores = self.sort_data_desc_and_filter_0_score(all_communities, all_scores)
         # ------------------------------ Topic Searching ------------------------------
         topic_searching_results = self.rag_system.global_topic_searching_run(
             user_query=state.user_query, 
@@ -163,7 +207,7 @@ class NodesModularRAG():
             }
         
         # Filter the information with the score
-        sorted_information, sorted_information_with_scores = self.sort_data_desc_and_filter_by_score(all_information, all_scores)
+        sorted_information, sorted_information_with_scores = self.aaa(all_information, all_scores)
         
         # after reranking, do topic searching for HyDE
         local_topic_searching_results = self.rag_system.local_topic_searching_run(
@@ -191,11 +235,11 @@ class NodesModularRAG():
 
         if state.local_topic_searching_and_hyde_result:
             all_queries.extend(state.local_topic_searching_and_hyde_result.possible_answers)
-            all_data_with_scores.extend(state.local_topic_searching_and_hyde_result.information_with_scores)
+            all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, state.local_topic_searching_and_hyde_result.information_with_scores)
             
         if state.global_topic_searching_and_hyde_result:
             all_queries.extend(state.global_topic_searching_and_hyde_result.possible_answers)
-            all_data_with_scores.extend(state.global_topic_searching_and_hyde_result.communities_with_scores)
+            all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, state.global_topic_searching_and_hyde_result.communities_with_scores)
             
         retrieved_data = self.retriever.hybrid_retrieve(state.specific_collection, all_queries, 10)
 
@@ -206,13 +250,12 @@ class NodesModularRAG():
         )
         
         retrieved_scores = self.rag_system.reranking_run_batch_async(node_batch_inputs=batch_inputs).relevance_scores
-        
-        assert len(retrieved_data) == len(retrieved_scores), "The number of data and scores must match, len(data) = %d, len(scores) = %d" % (len(retrieved_data), len(retrieved_scores))        
-        retrieved_data_with_scores = list(zip(retrieved_data, retrieved_scores))
-        all_data_with_scores = sorted(all_data_with_scores + retrieved_data_with_scores, key=lambda x: x[1], reverse=True)
-        sorted_data = [data for data, _ in all_data_with_scores]
+        _, sorted_retrieved_data_with_scores = self.sort_data_desc_and_filter_0_score(retrieved_data, retrieved_scores)
+        all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, sorted_retrieved_data_with_scores)
+        all_data = [data for data, _ in all_data_with_scores]
+        concise_all_data = all_data[:len(all_data)*3//4]        
         return {
-            "detailed_search_result": DetailedSearchResult(sorted_retrieved_data=sorted_data)
+            "detailed_search_result": DetailedSearchResult(sorted_retrieved_data=concise_all_data)
         }
         
     def information_organization_node(self, state: OverallState):

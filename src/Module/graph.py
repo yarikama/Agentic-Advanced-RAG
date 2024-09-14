@@ -53,6 +53,12 @@ class WorkFlowModularRAG():
         self.graph = workflow.compile()
         
 class WorkFlowModularHybridRAG():
+    """
+    Initialize the workflow with 
+    {
+        dataset_queries: [str],
+    }
+    """
     def __init__(self):
         # Create the workflow(graph)
         workflow = StateGraph(OverallState)
@@ -103,6 +109,39 @@ class WorkFlowModularHybridRAG():
                 "dataset_finished": END,
             }
         )
+        # Compile
+        self.graph = workflow.compile()
+        
+        
+class WorkFlowModularHybridRAG_Unit_Function_Test():
+    def __init__(self):
+        # Create the workflow(graph)
+        workflow = StateGraph(OverallState)
+        
+        # Add nodes class
+        nodes = NodesModularRAG()
+        
+        # Add nodes into the workflow
+        workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
+        workflow.add_node("local_topic_searching_and_hyde_node", nodes.local_topic_searching_and_hyde_node)
+        workflow.add_node("detailed_search_node", nodes.detailed_search_node)
+        workflow.add_node("information_organization_node", nodes.information_organization_node)
+        workflow.add_node("generation_node", nodes.generation_node)
+
+        # Draw the workflow
+        workflow.set_entry_point("user_query_classification_node")
+        workflow.set_finish_point("generation_node")
+        workflow.add_edge("user_query_classification_node", "local_topic_searching_and_hyde_node")
+        workflow.add_edge("local_topic_searching_and_hyde_node", "detailed_search_node")
+        workflow.add_conditional_edges(
+            "detailed_search_node",
+            nodes.is_information_organization_needed_cnode,
+            {
+                "information_organization_needed": "information_organization_node",
+                "information_organization_not_needed": "generation_node",
+            }
+        )
+        workflow.add_edge("information_organization_node", "generation_node")           
         # Compile
         self.graph = workflow.compile()
         

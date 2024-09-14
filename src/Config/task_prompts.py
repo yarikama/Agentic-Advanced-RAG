@@ -33,7 +33,7 @@ Consider the following guidelines:
 3. Domain Range Score (0-100):
     0-20 points: Extremely Specific
         Definition: Very precise questions involving a single operation or concept.
-        Example: "How do I adjust the focus on a microscope to view a cell sample?"
+        Example: "How do I adjust the focus on a microscope to view a cell sample?", "In what time, M.C. Escher was born?"
         
     21-40 points: Technical Expertise
         Definition: Questions requiring specific domain knowledge or skills, usually with clear solutions.
@@ -49,7 +49,7 @@ Consider the following guidelines:
         
     81-100 points: Global
         Definition: Questions about wide-ranging systemic issues, requiring consideration of multiple domains and long-term impacts.
-        Example: "How can we solve the global climate change crisis?"
+        Example: "How can we solve the global climate change crisis?", "What is the main topic of this dataset?", "What is the main idea of this book?"
         
 4. Relevant Keywords:
     - Pick up the most relevant keywords or entities from the user query.

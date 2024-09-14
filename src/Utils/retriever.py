@@ -182,7 +182,8 @@ class Retriever:
         Args:
             level: the level of the community to retrieve
         Returns:
-            all_community_summaries: List[str]
+            Dict[str, List[str]]
+                - community_summaries: List[str]
         """
         all_community_summaries = self.graphdatabase.dictionary_query_result(
         """

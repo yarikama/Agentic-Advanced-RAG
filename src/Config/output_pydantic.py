@@ -213,7 +213,7 @@ class OverallState(BaseModel):
     generation_result:                          Optional[str]                                = Field(None, description="The final generated result")
     repeat_times:                               Optional[int]                                = Field(0,    description="Number of repetitions", ge=0)
     # Batch Dataset Processing
-    dataset_queries:                            Optional[List[str]]                          = Field(None, description="List of queries from dataset")
+    dataset_queries:                            Optional[List[str]]                          = Field([],   description="List of queries from dataset")
     all_results:                                Annotated[List[str], lambda x, y: x + y]     = Field([],   description="List of all results")
     all_contexts:                               Annotated[List[str], lambda x, y: x + y]     = Field([],   description="List of all contexts")
 
