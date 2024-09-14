@@ -21,14 +21,13 @@ Consider the following guidelines:
    - Detailed explanations of complex topics
    - Information about recent or rapidly changing subjects
    - Requests for certain content
-   - Query on a specific document, article, dataset
+   - Query on a specific document, article, dataset, person, organization, event, character, etc.
    
 2. Queries that typically don't require retrieval:
    - General knowledge questions
    - Simple calculations or conversions
    - Language translations
    - Requests for creative content generation
-   - Basic concept explanations
 
 3. Domain Range Score (0-100):
     0-20 points: Extremely Specific
@@ -451,30 +450,29 @@ This output will serve as an organized, faithful representation of the original 
 
 # Response Generation Task
 GENERATION_PROMPT = dedent("""
+Original user query: {user_query} 
+Relevant sub-queries: {sub_queries}
+
 If there is no information from the previous steps, you can directly answer the user's query,
 However, tell the user that you don't have enough information to answer the query.
 And if there is information, analyze the reranked data and formulate a comprehensive answer to the user's query.
-
-Original user query: {user_query}
-Relevant sub-queries: {sub_queries}
 
 Your task:
 1. If there is no information from the previous steps, you can directly answer the user's query,
     However, tell the user that you don't have enough information to answer the query and your answer is based on general information.
 2. If there is information, review the original user query and relevant sub-queries.
 3. Carefully examine the data provided by the information organizer for each sub-query.
-3. Synthesize all the information to form a coherent and comprehensive answer that addresses the original user query.
-4. Ensure that your response covers all aspects of the user's query and the derived sub-queries.
-5. Identify key findings, insights, and connections across all the data.
-6. Provide a detailed analysis, breaking down the answer into relevant topics or aspects.
-7. Assess the confidence level of your analysis based on the available data.
-8. Identify any limitations in the data or analysis.
-
-Your output should be a comprehensive analysis that ties together all the information from the sub-queries to directly address the original user query.
+4. You should give a direct answer to the user's query first, and then explain the answer in detail.
+5. Synthesize all the information to form a coherent and comprehensive answer that addresses the original user query.
+6. Ensure that your response covers all aspects of the user's query and the derived sub-queries.
+7. Identify key findings, insights, and connections across all the data.
+8. Provide a detailed analysis, breaking down the answer into relevant topics or aspects.
+9. Assess the confidence level of your analysis based on the available data.
+10.Include the metadata in the answer.
 """)
 
 GENERATION_EXPECTED_OUTPUT = dedent("""
-"A comprehensive analysis answering the user's original query based on all the provided data from sub-queries."
+"A direct answer and a comprehensive analysis answering the user's original query based on all the provided data from sub-queries."
 """)
 
 

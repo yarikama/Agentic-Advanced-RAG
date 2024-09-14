@@ -106,6 +106,11 @@ class NodesModularRAG():
         return sorted_data, sorted_data_with_scores
     
     def update_next_query_node(self, state: OverallState):
+        """
+        This function is used to update the next query.
+        returns:
+            user_query(str): the next query
+        """
         index_of_current_result = len(state.all_results)
         print("index = ", index_of_current_result)
         print("total = ", len(state.dataset_queries))
@@ -114,16 +119,40 @@ class NodesModularRAG():
         }
         
     def user_query_classification_node(self, state: OverallState):
+        """
+        This function is used to classify the user query.
+        returns:
+            user_query_classification_result(UserQueryClassificationResult): the result of the user query classification
+            - needs_retrieval(bool): whether retrieval is needed
+            - domain_range_score(int): the score of the domain range
+            - justification(str): the justification for the classification decision
+            - relevant_keywords(List[str]): the list of relevant keywords
+        """
         return {  
             "user_query_classification_result": self.rag_system.user_query_classification_run(user_query=state.user_query)
         } 
     
     def query_process_node(self, state: OverallState):
+        """
+        This function is used to process the user query.
+        returns:
+            query_process_result(QueryProcessResult): the result of the query processing
+            - original_query(str): the original user query
+            - transformed_queries(Optional[List[str]]): the list of transformed queries
+            - decomposed_queries(Optional[List[str]]): the list of decomposed queries
+        """
         return {  
             "query_process_result": self.rag_system.query_process_run(user_query=state.user_query)
         } 
     
     def sub_queries_classification_node(self, state: OverallState):
+        """
+        This function is used to classify the sub queries.
+        returns:
+            sub_queries_classification_result(SubQueriesClassificationResult): the result of the sub queries classification
+            - queries(List[str]): the list of sub queries
+            - collection_name(List[Optional[str]]): the list of collection names for each sub query
+        """
         if state.specific_collection is None:
             return {
                 "sub_queries_classification_result": self.rag_system.sub_queries_classification_without_specification_run(user_query=state.user_query)
@@ -134,6 +163,14 @@ class NodesModularRAG():
             }
             
     def global_topic_searching_and_hyde_node(self, state: OverallState):
+        """
+        This function is used to search for the global topic and do HyDE.
+        returns:
+            global_topic_searching_and_hyde_result(GlobalTopicSearchingAndHyDEResult): the result of the global topic searching and HyDE
+            - communities_with_scores(List[Tuple[str, int]]): the list of communities with scores
+            - communities_summaries(List[str]): the list of community summaries
+            - possible_answers(List[str]): the list of possible answers
+        """
         # Iterate all community
         all_communities = self.retriever.global_retrieve(self.global_retrieval_level)["community_summaries"]
         
@@ -172,17 +209,85 @@ class NodesModularRAG():
         } 
         
     def local_topic_searching_and_hyde_node(self, state: OverallState):
+        """
+        This function is used to search for the local topic and do HyDE.
+        returns:
+            local_topic_searching_and_hyde_result(LocalTopicSearchingAndHyDEResult): the result of the local topic searching and HyDE
+            - information_with_scores(List[Tuple[str, int]]): the list of information with scores
+            - information_summaries(List[str]): the list of information summaries
+            - possible_answers(List[str]): the list of possible answers
+        """
         # judge the top_k, top_community, top_inside_relations from the score
+        scope_score = state.user_query_classification_result.domain_range_score
+        if scope_score >= 61:
+            top_entities                = 5
+            top_chunks                  = 2
+            top_communities             = 10
+            top_relationships           = 10
+            top_outside_relationships   = 5
+            top_inside_relationships    = 5
+        elif scope_score >= 41:
+            top_entities                = 7
+            top_chunks                  = 5
+            top_communities             = 5
+            top_relationships           = 10
+            top_outside_relationships   = 5
+            top_inside_relationships    = 5
+        elif scope_score >= 21:
+            top_entities                = 10
+            top_chunks                  = 8
+            top_communities             = 4
+            top_relationships           = 10
+            top_outside_relationships   = 5
+            top_inside_relationships    = 5
+        else:
+            top_entities                = 12
+            top_chunks                  = 12
+            top_communities             = 3
+            top_relationships           = 10
+            top_outside_relationships   = 5
+            top_inside_relationships    = 5
+            
         
         # get the results from the local retriever
-        results = self.retriever.local_retrieve_relationship_vector_search([state.user_query])
-        entity_descriptions = results["entity_descriptions"]
-        chunks_texts = results["chunks_texts"]
-        community_summaries = results["community_summaries"]
-        relationship_descriptions = results["relationship_descriptions"]
+        relationship_vector_results = self.retriever.local_retrieve_relationship_vector_search(
+            query_texts             = [state.user_query], 
+            top_entities            = top_entities,
+            top_chunks              = top_chunks,
+            top_communities         = top_communities,
+            top_relationships       = top_relationships
+        )
+            
+        relationship_vector_chunks_texts                    = relationship_vector_results["chunks_texts"]
+        relationship_vector_entity_descriptions             = relationship_vector_results["entity_descriptions"]
+        relationship_vector_community_summaries             = relationship_vector_results["community_summaries"]
+        relationship_vector_relationship_descriptions       = relationship_vector_results["relationship_descriptions"]
+        
+        
+        entity_keyword_results = self.retriever.local_retrieve_entity_keyword_search(
+            keywords                     =    state.user_query_classification_result.relevant_keywords,
+            top_entities                 =    top_entities,
+            top_chunks                   =    top_chunks,
+            top_communities              =    top_communities,
+            top_inside_relationships     =    top_inside_relationships,
+            top_outside_relationships    =    top_outside_relationships
+        )
+        entity_keyword_chunks_texts                      = entity_keyword_results["chunks_texts"]
+        entity_keyword_entity_descriptions               = entity_keyword_results["entity_descriptions"]
+        entity_keyword_community_summaries               = entity_keyword_results["community_summaries"]
+        entity_keyword_inside_relationship_descriptions  = entity_keyword_results["inside_relationship_descriptions"]
+        entity_keyword_outside_relationship_descriptions = entity_keyword_results["outside_relationship_descriptions"]
         
         # use the results to run the topic reranking
-        all_information = list(set(chunks_texts + community_summaries + entity_descriptions + relationship_descriptions))
+        all_information = list(set( relationship_vector_chunks_texts
+                                +   relationship_vector_community_summaries
+                                +   relationship_vector_entity_descriptions
+                                +   relationship_vector_relationship_descriptions
+                                +   entity_keyword_chunks_texts
+                                +   entity_keyword_entity_descriptions
+                                +   entity_keyword_community_summaries
+                                +   entity_keyword_inside_relationship_descriptions
+                                +   entity_keyword_outside_relationship_descriptions))
 
         # Batch the information
         batch_inputs = self.prepare_batch_input_for_reranking(
@@ -193,17 +298,28 @@ class NodesModularRAG():
         
         all_scores = self.rag_system.local_topic_reranking_run_batch_async(node_batch_inputs=batch_inputs).relevant_scores
 
-        # If the score is 0, return an empty result
+        # If the score is 0, use community summary as the information
         if sum(all_scores) == 0:
+            community_summaries = self.retriever.local_retrieve_community_vector_search([state.user_query], 10)["community_summaries"]
+            all_information = community_summaries
+            batch_inputs = self.prepare_batch_input_for_reranking(
+                input_list=all_information,
+                sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
+                user_query=state.user_query
+            )
+            all_scores = self.rag_system.local_topic_reranking_run_batch_async(node_batch_inputs=batch_inputs).relevant_scores
+            
+        # If the score is still 0, use the possible answers from the user query
+        if sum(all_scores) == 0:
+            possible_answers = self.retriever.generate_hypothetical_document(state.user_query)
             return {
                 "local_topic_searching_and_hyde_result": LocalTopicSearchingAndHyDEResult(
                     information_with_scores = [],
                     information_summaries = [],
-                    possible_answers = [],
+                    possible_answers = possible_answers,
                 )
             }
-        
-        # Filter the information with the score
+
         sorted_information, sorted_information_with_scores = self.sort_data_desc_and_filter_0_score(all_information, all_scores)
         
         # after reranking, do topic searching for HyDE
@@ -224,6 +340,12 @@ class NodesModularRAG():
         }
         
     def detailed_search_node(self, state: OverallState):
+        """
+        This function is used to do the detailed search.
+        returns:
+            detailed_search_result(DetailedSearchResult): the result of the detailed search
+            - sorted_retrieved_data(List[str]): the list of data sorted in descending order
+        """
         all_data_with_scores = []
         all_queries = [state.user_query]
         
@@ -250,12 +372,18 @@ class NodesModularRAG():
         _, sorted_retrieved_data_with_scores = self.sort_data_desc_and_filter_0_score(retrieved_data, retrieved_scores)
         all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, sorted_retrieved_data_with_scores)
         all_data = [data for data, _ in all_data_with_scores]
-        concise_all_data = all_data[:len(all_data)*3//4]        
+        concise_all_data = all_data[:max(len(all_data)*3//4, 1)]        
         return {
             "detailed_search_result": DetailedSearchResult(sorted_retrieved_data=concise_all_data)
         }
         
     def information_organization_node(self, state: OverallState):
+        """
+        This function is used to organize the information.
+        returns:
+            information_organization_result(InformationOrganizationResult): the result of the information organization
+            - organized_information(List[str]): the list of organized information
+        """
         return {
             "information_organization_result": self.rag_system.information_organization_run(
                 user_query=state.user_query,
@@ -264,7 +392,13 @@ class NodesModularRAG():
             )
         }
          
-    def generation_node(self, state: OverallState):        
+    def generation_node(self, state: OverallState):
+        """
+        This function is used to generate the response.
+        returns:
+            generation_result(GenerationResult): the result of the generation
+            - response(str): the response
+        """
         return {
             "generation_result": self.rag_system.generation_run(
                 user_query=state.user_query,
@@ -273,25 +407,35 @@ class NodesModularRAG():
         }
         
     def store_result_for_ragas_node(self, state: OverallState):
+        """
+        This function is used to store the result for RAGAS.
+        returns:
+            state(OverallState): the state of the system
+        """
         new_answer = state.generation_result
-        new_context = state.information_organization_result if state.information_organization_result else []
+        new_context = state.information_organization_result if state.information_organization_result else ""
         return {
-            "user_query": None,
-            "user_query_classification_result": None,
-            "query_process_result": None,
-            "sub_queries_classification_result": None,
-            "global_topic_searching_and_hyde_result": None,
-            "local_topic_searching_and_hyde_result": None,
-            "detailed_search_result": None,
-            "information_organization_result": None,
-            "response_audit_result": None,
-            "generation_result": None,
-            "repeat_times": 0,
-            "all_results": [new_answer],
-            "all_contexts": [new_context],
+            "user_query":                               None,
+            "user_query_classification_result":         None,
+            "query_process_result":                     None,
+            "sub_queries_classification_result":        None,
+            "global_topic_searching_and_hyde_result":   None,
+            "local_topic_searching_and_hyde_result":    None,
+            "detailed_search_result":                   None,
+            "information_organization_result":          None,
+            "response_audit_result":                    None,
+            "generation_result":                        None,
+            "repeat_times":                             0,
+            "all_results":                              [new_answer],
+            "all_contexts":                             [new_context],
         }
         
     def repeat_count_node(self, state: OverallState):
+        """
+        This function is used to count the repeat times.
+        returns:
+            repeat_times(int): the repeat times
+        """
         repeat_times = state["repeat_times"]
         if repeat_times is None:
             repeat_times = 0
@@ -300,36 +444,66 @@ class NodesModularRAG():
         }
 
     def database_update_node(self, state: OverallState):
+        """
+        This function is used to update the database.
+        returns:
+            state(OverallState): the state of the system
+        """
         return self.rag_system.database_update_run()
         
     # Conditional Nodes
     def is_retrieval_needed_cnode(self, state: OverallState):
+        """
+        This function is used to check if retrieval is needed.
+        returns:
+            retrieval_needed(str): the type of retrieval needed
+        """
         if not state.user_query_classification_result.needs_retrieval:
             return "retrieval_not_needed"
-        if state.user_query_classification_result.domain_range_score >= 70:
+        if state.user_query_classification_result.domain_range_score >= 80:
             return "retrieval_needed_for_global_topic_searching"
         else:
             return "retrieval_needed_for_local_topic_searching"
         
     def is_information_organization_needed_cnode(self, state: OverallState):
+        """
+        This function is used to check if information organization is needed.
+        returns:
+            information_organization_needed(str): the type of information organization needed
+        """
         if state.detailed_search_result and state.detailed_search_result.sorted_retrieved_data:
             return "information_organization_needed"
         else:
             return "information_organization_not_needed"
     
     def is_restart_needed_cnode(self, state: OverallState):
+        """
+        This function is used to check if restart is needed.
+        returns:
+            restart_needed(str): the type of restart needed
+        """
         if state.response_audit_result.restart_required and state.repeat_times < 3:
             return "restart_needed"
         else:
             return "restart_not_needed"
                 
     def is_dataset_unfinished_cnode(self, state: OverallState):
+        """
+        This function is used to check if the dataset is unfinished.
+        returns:
+            dataset_unfinished(str): the type of dataset unfinished
+        """
         if len(state.dataset_queries) > len(state.all_results):
             return "dataset_unfinished"
         else:
             return "dataset_finished"
     
     def is_global_local_cnode(self, state: OverallState):
+        """
+        This function is used to check if the global or local retriever is needed.
+        returns:
+            global_local(str): the type of global or local retriever needed
+        """
         if state.user_query_classification_result.domain_range_score >= 70:
             return "global retriever"
         else:
