@@ -12,6 +12,7 @@ Your task is to:
 1. Classify this query as either requiring retrieval or not (Boolean value)
 2. Evaluate the query's domain range score (Integer value from 0 to 100)
 3. Provide a brief justification for your decision (String value)
+4. Pick up the most relevant keywords or entities from the user query (List[str])
 
 Consider the following guidelines:
 
@@ -49,6 +50,10 @@ Consider the following guidelines:
     81-100 points: Global
         Definition: Questions about wide-ranging systemic issues, requiring consideration of multiple domains and long-term impacts.
         Example: "How can we solve the global climate change crisis?"
+        
+4. Relevant Keywords:
+    - Pick up the most relevant keywords or entities from the user query.
+    - Example: "What is the capital of the United States?" -> ["capital", "United States"]
 """)
 
 USER_QUERY_CLASSIFICATION_EXPECTED_OUTPUT = dedent("""
@@ -57,6 +62,7 @@ class UserQueryClassificationResult(BaseModel):
     needs_retrieval: bool
     domain_range_score: int
     justification: str
+    relevant_keywords: List[str]
 """)
 
 # Plan Coordinator Task

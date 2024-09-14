@@ -21,7 +21,7 @@ class KnowledgeGraphDatabase:
         )       
         print("GraphDatabase initialized.")
         
-    def db_query(self, cypher: str, params: Dict[str, Any] = {}) -> Dict[str, Any]:
+    def dictionary_query_result(self, cypher: str, params: Dict[str, Any] = {}) -> Dict[str, Any]:
         """
         Execute a Cypher query and return the result as a dictionary.
         
@@ -54,13 +54,30 @@ class KnowledgeGraphDatabase:
         """
         self.driver.execute_query("MATCH (n) DETACH DELETE n")
         print("All data deleted.")
+        
+    def delete_all_indexes(self):
+        """
+        Delete all indexes from the database.
+        """
+        delete_indexes = ("""
+        DROP INDEX entity_name_index IF EXISTS;
+        DROP INDEX entity_description_vector_index IF EXISTS;
+        DROP INDEX relationship_description_vector_index IF EXISTS;
+        DROP INDEX community_summary_vector_index IF EXISTS;
+        """).split(";")
+        for delete_index in delete_indexes:
+            if len((delete_index or "").strip()) > 0:
+                print(delete_index)
+                self.driver.execute_query(delete_index)
+        print("All indexes deleted.")
 
     def delete_all(self):
         """
         Delete all data and schema from the database.
         """
-        self.delete_all_data()
+        self.delete_all_indexes()
         self.delete_all_schema()
+        self.delete_all_data()
         print("All data and schema deleted.")
     
     def batched_import(self, statement, df, batch_size=1000):
@@ -117,19 +134,10 @@ class KnowledgeGraphDatabase:
                 
         print("Constraints created.")
     
-    def transform_graph_rag_to_neo4j(self, data_path: str = "artifacts"):
-        """
-        ref:    https://medium.com/towards-data-science/integrating-microsoft-graphrag-into-neo4j-e0d4fa00714c
-        """
-        self.create_constraints()
-        self.import_all_data(data_path)
-        self.create_vector_indexes()
-        self.create_community_weight()
-
     def import_documents(self, data_path):
         document_df = pd.read_parquet(f'{data_path}/create_final_documents.parquet')
-        print("Documents DataFrame head:")
-        print(document_df.head(2))
+        # print("Documents DataFrame head:")
+        # print(document_df.head(2))
         
         document_statement = """
         // SET DOCUMENT AND ITS PROPERTIES
@@ -137,11 +145,12 @@ class KnowledgeGraphDatabase:
         SET document += value {.title, .raw_content}
         """
         self.batched_import(document_statement, document_df)
+        print("Documents imported.")
 
     def import_text_units(self, data_path):
         text_df = pd.read_parquet(f'{data_path}/create_final_text_units.parquet')
-        print("Text Units DataFrame head:")
-        print(text_df.head(2))
+        # print("Text Units DataFrame head:")
+        # print(text_df.head(2))
         
         text_statement = """
         // SET CHUNK AND ITS PROPERTIES
@@ -155,11 +164,12 @@ class KnowledgeGraphDatabase:
         MERGE (chunk)-[:PART_OF]->(document)
         """
         self.batched_import(text_statement, text_df)
+        print("Text Units imported.")
 
     def import_entities(self, data_path):
         entity_df = pd.read_parquet(f'{data_path}/create_final_entities.parquet')
-        print("Entities DataFrame head:")
-        print(entity_df.head(2))
+        # print("Entities DataFrame head:")
+        # print(entity_df.head(2))
         
         entity_statement = """
         // SET ENTITY AND ITS PROPERTIES
@@ -177,11 +187,12 @@ class KnowledgeGraphDatabase:
         MERGE (chunk)-[:HAS_ENTITY]->(entity)
         """
         self.batched_import(entity_statement, entity_df)
-
+        print("Entities imported.")
+        
     def import_relationships(self, data_path):
         relationship_df = pd.read_parquet(f'{data_path}/create_final_relationships.parquet')
-        print("Relationships DataFrame head:")
-        print(relationship_df.head(2))
+        # print("Relationships DataFrame head:")
+        # print(relationship_df.head(2))
         
         relationship_statement = """
         // SET RELATIONSHIP AND ITS PROPERTIES
@@ -196,22 +207,25 @@ class KnowledgeGraphDatabase:
         RETURN count(*) as createdRelationships
         """
         self.batched_import(relationship_statement, relationship_df)
-
+        print("Relationships imported.")
+        
     def import_communities(self, data_path):
         community_df = pd.read_parquet(f'{data_path}/create_final_communities.parquet')
-        print("Communities DataFrame head:")
-        print(community_df.head(2))
+        # print("Communities DataFrame head:")
+        # print(community_df.head(2))
         
         community_statement = """
         // SET COMMUNITY AND ITS PROPERTIES
         MERGE (community:__Community__ {id:value.id})
         SET community += value {.level, .title}
         
-        // ADD RELATIONSHIPS BETWEEN CHUNKS AND COMMUNITIES
+        // ADD RELATIONSHIPS BETWEEN CHUNKS AND COMMUNITIES (Complexity too high)
+        /*
         WITH *
         UNWIND value.text_unit_ids as text_unit_id
         MATCH (chunk:__Chunk__ {id:text_unit_id})
         MERGE (community)-[:HAS_CHUNK]->(chunk)
+        */
         
         // SET RELATIONSHIPS BETWEEN ENTITIES AND COMMUNITIES
         WITH *
@@ -222,11 +236,12 @@ class KnowledgeGraphDatabase:
         RETURN count(distinct community) as createdCommunities
         """
         self.batched_import(community_statement, community_df)
+        print("Communities imported.")
 
     def import_community_reports(self, data_path):
         community_report_df = pd.read_parquet(f'{data_path}/create_final_community_reports.parquet')
-        print("Community Reports DataFrame head:")
-        print(community_report_df.head(2))
+        # print("Community Reports DataFrame head:")
+        # print(community_report_df.head(2))
         
         community_report_statement = """
         // SET COMMUNITY REPORT AND ITS PROPERTIES
@@ -245,11 +260,12 @@ class KnowledgeGraphDatabase:
         SET finding += value_finding
         """
         self.batched_import(community_report_statement, community_report_df)
+        print("Community Reports imported.")
 
     def import_covariates(self, data_path):
         covariate_df = pd.read_parquet(f'{data_path}/create_final_covariates.parquet')
-        print("Covariates DataFrame head:")
-        print(covariate_df.head(2))
+        # print("Covariates DataFrame head:")
+        # print(covariate_df.head(2))
         
         covariate_statement = """
         MERGE (covariate:__Covariate__ {id:value.id})
@@ -259,7 +275,8 @@ class KnowledgeGraphDatabase:
         MERGE (chunk)-[:HAS_COVARIATE]->(covariate)
         """
         self.batched_import(covariate_statement, covariate_df)
-
+        print("Covariates imported.")
+        
     def import_all_data(self, data_path):
         self.import_documents(data_path)
         self.import_text_units(data_path)
@@ -270,12 +287,30 @@ class KnowledgeGraphDatabase:
         # self.import_covariates(data_path)
         print("All data imported.")
         
-
+    def create_entity_name_index(self):
+        """
+        Create an index for the entity name.
+        """
+        index_name = "entity_name_index"
+        self.driver.execute_query(""" 
+        CREATE FULLTEXT INDEX """ + index_name + """ 
+        IF NOT EXISTS FOR (entity:__Entity__) ON EACH [entity.name, entity.description]
+        OPTIONS {
+            indexConfig: {
+                `fulltext.analyzer`: 'english',
+                `fulltext.eventually_consistent`: true
+            }
+        }
+        """
+        )
+        print("Entity name index created.")
+        print("Index name: ", index_name)
+        
     def create_entity_description_vector_index(self):
         """
         Create a vector index for the entity.
         """
-        index_name = "entity"
+        index_name = "entity_description_vector_index"
         self.driver.execute_query(""" 
         CREATE VECTOR INDEX """ + index_name + """ 
         IF NOT EXISTS FOR (entity:__Entity__) ON entity.description_embedding
@@ -288,15 +323,16 @@ class KnowledgeGraphDatabase:
         """
         )
         print("Entity description vector index created.")
+        print("Index name: ", index_name)
     
     def create_relationship_description_vector_index(self):
         """
         Create a vector index for the relationship.
         """
-        index_name = "relationship"
+        index_name = "relationship_description_vector_index"
         self.driver.execute_query(""" 
         CREATE VECTOR INDEX """ + index_name + """ 
-        IF NOT EXISTS FOR (relationship:__Relationship__) ON relationship.description_embedding
+        IF NOT EXISTS FOR ()-[relationship:RELATED]->() ON relationship.description_embedding
         OPTIONS {
             indexConfig: {
                 `vector.dimensions`: """ + str(const.EMBEDDING_DENSE_DIM) + """,
@@ -306,12 +342,13 @@ class KnowledgeGraphDatabase:
         """
         )
         print("Relationship description vector index created.")
+        print("Index name: ", index_name)
         
     def create_community_summary_vector_index(self):
         """
         Create a vector index for the community.
         """
-        index_name = "community"
+        index_name = "community_summary_vector_index"
         self.driver.execute_query(""" 
         CREATE VECTOR INDEX """ + index_name + """ 
         IF NOT EXISTS FOR (community:__Community__) ON community.summary_embedding
@@ -324,23 +361,36 @@ class KnowledgeGraphDatabase:
         """
         )
         print("Community summary vector index created.")
+        print("Index name: ", index_name)
         
     def create_vector_indexes(self):
         """
         Create all vector indexes for the database.
         """
+        self.create_entity_name_index()
         self.create_entity_description_vector_index()
         self.create_relationship_description_vector_index()
         self.create_community_summary_vector_index()
+        print("All vector indexes created.")
         
     def create_community_weight(self):
         """
         Create a weight for the community.
         """
-        self.driver.execute_query(
-        """
+        self.driver.execute_query("""
         MATCH (community:`__Community__`)<-[:IN_COMMUNITY]-()<-[:HAS_ENTITY]-(chunk)
         WITH community, count(distinct chunk) AS chunkCount
         SET community.weight = chunkCount
         """
         )
+        print("Community weight created.")
+        
+    def transform_graph_rag_to_neo4j(self, data_path: str = "artifacts"):
+        """
+        ref:    https://medium.com/towards-data-science/integrating-microsoft-graphrag-into-neo4j-e0d4fa00714c
+        """
+        self.create_constraints()
+        self.import_all_data(data_path)
+        self.create_vector_indexes()
+        self.create_community_weight()
+        print("Graph RAG transformed to Neo4j.")

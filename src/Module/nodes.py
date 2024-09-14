@@ -132,15 +132,15 @@ class NodesModularRAG():
         
         # get the results from the local retriever
         results = self.retriever.local_retrieve([state.user_query])
-        chunks = results["text_mapping"]
-        communities = results["report_mapping"]
+        chunks = results["chunks"]
+        communities = results["communities"]
         outside_relations = results["outside_relations"]
         inside_relations = results["inside_relations"]
-        entities = results["entities"]
+        entities_description = results["entities_description"]
         
         # use the results to run the topic reranking
-        all_information = list(set(chunks + communities + outside_relations + inside_relations + entities))
-        
+        all_information = list(set(chunks + communities + outside_relations + inside_relations + entities_description))
+
         print("all_information = ", all_information)
         
         # Batch the information

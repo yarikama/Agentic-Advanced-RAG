@@ -18,6 +18,7 @@ class UserQueryClassificationResult(BaseModel):
     needs_retrieval: bool = Field(..., description="Indicates whether retrieval is needed")
     domain_range_score: int = Field(..., description="Score for the domain range", ge=0, le=100)
     justification: str = Field(..., description="Explanation for the classification decision")
+    relevant_keywords: List[str] = Field(..., description="List of relevant keywords")
 
 class QueryProcessResult(BaseModel):
     """
