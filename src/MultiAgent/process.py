@@ -208,6 +208,7 @@ class MultiAgent_RAG:
         )
         return self.tasks.create_sub_queries_classification_task_without_specific_collection.output.pydantic
         
+            
     def global_topic_reranking_run_batch_async(self, **kwargs):
         """
         Run the global topic reranking task asynchronously in batches.

@@ -2,7 +2,7 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from .embedder import Embedder
-from Config import constants as const
+import Config.constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
 from .knowledge_graph_database import KnowledgeGraphDatabase
@@ -113,6 +113,16 @@ class Retriever:
                         isHyDE: bool = False) -> List[Dict[str, Any]]:
         """
         This is for similar multiple queries searching, the result is a deduplicated list of documents
+        Args:
+            collection_name: str -> The name of the collection
+            query_texts: List[str] -> The list of queries
+            top_k: int -> The number of the top results
+            alpha: float -> The weight of the dense search
+            isHyDE: bool -> Whether to use HyDE to generate hypothetical documents
+        Returns:
+            List[Dict[str, Any]] -> The deduplicated search results
+                - content: str -> The content of the document
+                - metadata: Dict[str, Any] -> The metadata of the document
         """
         dense_queries = self.embedder.embed_dense(query_texts)
         sparse_queries = self.embedder.embed_sparse(collection_name, query_texts)
@@ -157,7 +167,11 @@ class Retriever:
 
     def deduplicate_results(self, batch_results: List[List[Dict[str, Any]]]) -> List[Dict[str, Any]]:
         """
-        deduplicate the search results
+        This function is used to deduplicate the search results
+        Args:
+            batch_results: List[List[Dict[str, Any]]] -> The search results from the queries
+        Returns:
+            unique_results: List[Dict[str, Any]] -> The deduplicated search results
         """
         seen_contents = set()
         unique_results = []

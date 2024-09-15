@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Annotated, Tuple
 import pandas as pd
-import constants as const
+import Config.constants as const
 
 # Pydantic Models For LLM Structure Outputs
 class HyDEOutput(BaseModel):
@@ -198,14 +198,15 @@ class RerankingState(BaseModel):
     Represents the state for reranking.
 
     Attributes:
-        batch_input (List[Dict[str, Any]]): List of batch input data.
-            - input_list (List[str]): List of input data.
-            - user_query (str): The user's input query.
-            - sub_queries (List[str]): List of sub-queries.
-        number_ticket (int): Ticket number for the batch.
+        - user_query (str): The user's input query.
+        - sub_queries (List[str]): List of sub-queries.
+        - batch_size (int): Number of communities or information to rerank.
+        - batch_data (List[str]): List of communities or information to rerank.
     """
-    batch_input: List[Dict[str, Any]]
-    number_ticket: int
+    user_query: str
+    sub_queries: Optional[List[str]]
+    batch_size: int
+    batch_data: List[str]
 
 
 def concate_or_reset(input_list: List[Tuple[str, int]], new_list: List[Tuple[str, int]]) -> List[Tuple[str, int]]:
@@ -248,6 +249,8 @@ class OverallState(BaseModel):
     detailed_search_result:                     Optional[DetailedSearchResult]                       = Field(None, description="Result of detailed search")
     information_organization_result:            Optional[str]                                        = Field(None, description="Result of information organization")
     response_audit_result:                      Optional[ResponseAuditResult]                        = Field(None, description="Result of response auditing")
+    # Retrieval
+    retrieval_data:                            Optional[List[str]]                                    = Field(None, description="Retrieved data")
     # Reranking
     global_mapping_result:                    Annotated[List[Tuple[str, int]], concate_or_reset]   = Field([],   description="Result of global reranking")
     local_mapping_result:                     Annotated[List[Tuple[str, int]], concate_or_reset]   = Field([],   description="Result of local reranking")

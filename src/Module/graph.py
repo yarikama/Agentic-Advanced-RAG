@@ -69,14 +69,19 @@ class WorkFlowModularHybridRAG():
         # Add nodes into the workflow
         workflow.add_node("update_next_query_node", nodes.update_next_query_node)
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
-        workflow.add_node("local_topic_searching_and_hyde_node", nodes.local_topic_searching_and_hyde_node)
-        workflow.add_node("global_topic_searching_and_hyde_node", nodes.global_topic_searching_and_hyde_node)
-        workflow.add_node("detailed_search_node", nodes.detailed_search_node)
+        workflow.add_node("retrieve_global_data_node", nodes.retrieve_global_data_node)
+        workflow.add_node("retrieve_local_data_node", nodes.retrieve_local_data_node)
+        workflow.add_node("retrieve_detail_data_node", nodes.retrieve_detail_data_node)
+        workflow.add_node("global_mapping_node", nodes.global_mapping_node)
+        workflow.add_node("local_mapping_node", nodes.local_mapping_node)
+        workflow.add_node("detail_mapping_node", nodes.detail_mapping_node)
+        workflow.add_node("global_reducing_node", nodes.global_reducing_node)
+        workflow.add_node("local_reducing_node", nodes.local_reducing_node)
+        workflow.add_node("detail_reducing_node", nodes.detail_reducing_node)
         workflow.add_node("information_organization_node", nodes.information_organization_node)
         workflow.add_node("generation_node", nodes.generation_node)
         workflow.add_node("store_result_for_ragas_node", nodes.store_result_for_ragas_node)
 
-        
         # Draw the workflow
         workflow.set_entry_point("update_next_query_node")
         workflow.add_edge("update_next_query_node", "user_query_classification_node")
@@ -85,21 +90,20 @@ class WorkFlowModularHybridRAG():
             nodes.is_retrieval_needed_cnode,
             {
                 "retrieval_not_needed": "generation_node",
-                "retrieval_needed_for_global_topic_searching": "global_topic_searching_and_hyde_node",
-                "retrieval_needed_for_local_topic_searching": "local_topic_searching_and_hyde_node",
+                "retrieval_needed_for_global_topic_searching": "retrieve_global_data_node",
+                "retrieval_needed_for_local_topic_searching": "retrieve_local_data_node",
             }
         )
-        workflow.add_edge("local_topic_searching_and_hyde_node", "detailed_search_node")
-        workflow.add_edge("global_topic_searching_and_hyde_node", "detailed_search_node")
-        workflow.add_conditional_edges(
-            "detailed_search_node",
-            nodes.is_information_organization_needed_cnode,
-            {
-                "information_organization_needed": "information_organization_node",
-                "information_organization_not_needed": "generation_node",
-            }
-        )
-        workflow.add_edge("information_organization_node", "generation_node")           
+        workflow.add_conditional_edges("retrieve_global_data_node", nodes.dispatch_global_mapping_cnode, ["global_mapping_node"])
+        workflow.add_conditional_edges("retrieve_local_data_node", nodes.dispatch_local_mapping_cnode, ["local_mapping_node"])
+        workflow.add_edge("global_mapping_node", "global_reducing_node")
+        workflow.add_edge("local_mapping_node", "local_reducing_node")
+        workflow.add_edge("global_reducing_node", "retrieve_detail_data_node")
+        workflow.add_edge("local_reducing_node", "retrieve_detail_data_node")
+        workflow.add_conditional_edges("retrieve_detail_data_node", nodes.dispatch_detail_mapping_cnode, ["detail_mapping_node"])
+        workflow.add_edge("detail_mapping_node", "detail_reducing_node")
+        workflow.add_edge("detail_reducing_node", "information_organization_node")
+        workflow.add_edge("information_organization_node", "generation_node")
         workflow.add_edge("generation_node", "store_result_for_ragas_node")
         workflow.add_conditional_edges(
             "store_result_for_ragas_node",
@@ -123,25 +127,40 @@ class WorkFlowModularHybridRAG_Unit_Function_Test():
         
         # Add nodes into the workflow
         workflow.add_node("user_query_classification_node", nodes.user_query_classification_node)
-        workflow.add_node("local_topic_searching_and_hyde_node", nodes.local_topic_searching_and_hyde_node)
-        workflow.add_node("detailed_search_node", nodes.detailed_search_node)
+        workflow.add_node("retrieve_global_data_node", nodes.retrieve_global_data_node)
+        workflow.add_node("retrieve_local_data_node", nodes.retrieve_local_data_node)
+        workflow.add_node("retrieve_detail_data_node", nodes.retrieve_detail_data_node)
+        workflow.add_node("global_mapping_node", nodes.global_mapping_node)
+        workflow.add_node("local_mapping_node", nodes.local_mapping_node)
+        workflow.add_node("detail_mapping_node", nodes.detail_mapping_node)
+        workflow.add_node("global_reducing_node", nodes.global_reducing_node)
+        workflow.add_node("local_reducing_node", nodes.local_reducing_node)
+        workflow.add_node("detail_reducing_node", nodes.detail_reducing_node)
         workflow.add_node("information_organization_node", nodes.information_organization_node)
         workflow.add_node("generation_node", nodes.generation_node)
 
         # Draw the workflow
         workflow.set_entry_point("user_query_classification_node")
         workflow.set_finish_point("generation_node")
-        workflow.add_edge("user_query_classification_node", "local_topic_searching_and_hyde_node")
-        workflow.add_edge("local_topic_searching_and_hyde_node", "detailed_search_node")
         workflow.add_conditional_edges(
-            "detailed_search_node",
-            nodes.is_information_organization_needed_cnode,
+            "user_query_classification_node",
+            nodes.is_retrieval_needed_cnode,
             {
-                "information_organization_needed": "information_organization_node",
-                "information_organization_not_needed": "generation_node",
+                "retrieval_not_needed": "generation_node",
+                "retrieval_needed_for_global_topic_searching": "retrieve_global_data_node",
+                "retrieval_needed_for_local_topic_searching": "retrieve_local_data_node",
             }
         )
-        workflow.add_edge("information_organization_node", "generation_node")           
+        workflow.add_conditional_edges("retrieve_global_data_node", nodes.dispatch_global_mapping_cnode, ["global_mapping_node"])
+        workflow.add_conditional_edges("retrieve_local_data_node", nodes.dispatch_local_mapping_cnode, ["local_mapping_node"])
+        workflow.add_edge("global_mapping_node", "global_reducing_node")
+        workflow.add_edge("local_mapping_node", "local_reducing_node")
+        workflow.add_edge("global_reducing_node", "retrieve_detail_data_node")
+        workflow.add_edge("local_reducing_node", "retrieve_detail_data_node")
+        workflow.add_conditional_edges("retrieve_detail_data_node", nodes.dispatch_detail_mapping_cnode, ["detail_mapping_node"])
+        workflow.add_edge("detail_mapping_node", "detail_reducing_node")
+        workflow.add_edge("detail_reducing_node", "information_organization_node")
+        workflow.add_edge("information_organization_node", "generation_node")
         # Compile
         self.graph = workflow.compile()
         

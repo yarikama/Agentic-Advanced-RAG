@@ -153,7 +153,21 @@ class VectorDatabase:
                     weights: List[float] = const.RERANK_WEIGHTS,    
                     top_k: int = const.TOP_K
                     ) -> List[Dict[str, Any]]:
-
+        """
+        This function is used to perform a hybrid search on the vector database.
+        It uses the WeightedRanker or RRFRanker to rerank the search results.
+        
+        Args:
+            collection_name: str -> The name of the collection
+            search_requests: List[Dict[str, Any]] -> The search requests
+            rerank_type: str -> The type of reranking to use
+            weights: List[float] -> The weights to use for the reranking
+            top_k: int -> The number of the top results
+        Returns:
+            List[Dict[str, Any]] -> The search results
+                - content: str -> The content of the document
+                - metadata: Dict[str, Any] -> The metadata of the document
+        """
         collection = self.get_collection(collection_name)
         collection.load()
         rerank = WeightedRanker(*weights) if rerank_type == "weighted" else RRFRanker()
