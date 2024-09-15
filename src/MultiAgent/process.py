@@ -52,7 +52,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=True,
+            verbose=const.CREWAI_PROCESS_VERBOSE,
         )
         node_inputs = kwargs.get("node_inputs")
         return self.crew.kickoff(inputs=node_inputs) if node_inputs else self.crew.kickoff()
@@ -71,7 +71,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
         )
         node_batch_inputs = kwargs.get("node_batch_inputs")
         return self.crew.kickoff_for_each(inputs=node_batch_inputs) if node_batch_inputs else self.crew.kickoff()
@@ -90,7 +90,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_agents(*kwargs.get("node_agents", [])),
             tasks=self.tasks.get_tasks(*kwargs.get("node_tasks", [])),
             process=Process.hierarchical if kwargs.get("node_process") == "Hierarchical" else Process.sequential,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
         )
         node_batch_inputs = kwargs.get("node_batch_inputs")
 
@@ -397,7 +397,7 @@ class MultiAgent_RAG:
     #         agents=self.agents.get_retrieval_and_generation_node_agent(),
     #         tasks=self.tasks.get_retrieval_and_generation_node_tasks(),
     #         process=Process.sequential,
-    #         verbose=True,
+    #         verbose=const.CREWAI_AGENT_VERBOSE,
     #         output_log_file="logs.txt",
     #     )
     #     self.crew.kickoff()
@@ -428,7 +428,7 @@ class MultiAgent_RAG:
             agents=self.agents.get_database_update_node_agent(),
             tasks=self.tasks.get_database_update_node_task(),
             process=Process.sequential,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             output_log_file="logs.txt",
         )
         self.crew.kickoff()
@@ -466,7 +466,7 @@ class MultiAgent_RAG:
             tasks=self.tasks.get_sequential_tasks() if mode == "sequential" else self.tasks.get_hierarchical_tasks(),
             process=Process.sequential if mode == "sequential" else Process.hierarchical,
             output_log_file="logs.txt",
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
         )        
         self.crew.kickoff()        
         return {

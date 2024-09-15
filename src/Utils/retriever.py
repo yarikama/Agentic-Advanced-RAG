@@ -8,8 +8,10 @@ from .vector_database import VectorDatabase
 from .knowledge_graph_database import KnowledgeGraphDatabase
 from langchain_community.vectorstores import Neo4jVector
 from langchain_community.graphs import Neo4jGraph
-from langchain_openai import OpenAIEmbeddings
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from Config.task_prompts import HYDE_PROMPT
 from typing import List, Dict, Any, Union, Optional, Set
+from Config.output_pydantic import HyDEOutput
 import json
 load_dotenv()
 
@@ -37,16 +39,15 @@ class Retriever:
         self.client = OpenAI(api_key=self.openai_api_key)
         print("Retriever initialized")
 
-    def generate_hypothetical_document(self, query: str) -> str:
-        response = self.client.chat.completions.create(
-            model=const.MODEL_NAME,  
-            messages=[
-                {"role": "system", "content": "You are a helpful assistant that generates a hypothetical document based on a given query."},
-                {"role": "user", "content": f"Generate a short, relevant document that could answer the query in less than 60 words: {query}"}
-            ]
+    def generate_hypothetical_document(self, query: str) -> List[str]:
+        prompt = HYDE_PROMPT.format(query=query)
+        hyde_llm = ChatOpenAI(
+            model=const.MODEL_NAME,
+            temperature=0.5,
         )
-        return response.choices[0].message.content
-    
+        response = hyde_llm.with_structured_output(HyDEOutput).invoke(prompt)
+        return response.possible_answers
+
     def dense_search_request(self, 
                             dense_query_vectors: Union[List[float], List[List[float]]], 
                             field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:

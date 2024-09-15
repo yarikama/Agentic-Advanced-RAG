@@ -1,6 +1,12 @@
 # prompts.py
 from textwrap import dedent
 
+# HyDE Prompt
+HYDE_PROMPT = dedent("""
+Your task is to generate 3 - 5 hypothetical answer that could answer the user query.
+User Query: "{query}"
+""")
+
 
 # User Query Classification Task
 USER_QUERY_CLASSIFICATION_PROMPT = dedent("""

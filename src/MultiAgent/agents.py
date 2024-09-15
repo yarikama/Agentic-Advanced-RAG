@@ -5,6 +5,7 @@ from langchain_openai import ChatOpenAI
 from .tools import Tools
 # from Frontend import * 
 from langchain_core.callbacks.base import BaseCallbackHandler
+import Config.constants as const 
 
 class Agents:
     def __init__(self, temperature: float, model_name: str, tools: Tools):
@@ -142,7 +143,7 @@ class Agents:
             Your expertise lies in understanding the nuances of human queries and efficiently 
             categorizing them for optimal processing.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -161,7 +162,7 @@ class Agents:
             into manageable steps. Your experience in coordinating diverse teams makes you 
             the perfect fit for organizing the efforts of various specialized agents.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -180,7 +181,7 @@ class Agents:
             Your background in computational linguistics allows you to effortlessly transform and 
             decompose complex queries into their most effective forms.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -201,7 +202,7 @@ class Agents:
             Your years of experience in managing vast amounts of data have honed your skills in 
             quickly identifying key topics and their relationships.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -220,7 +221,7 @@ class Agents:
             Your ability to quickly sift through large datasets and pinpoint relevant information 
             is unparalleled.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -239,7 +240,7 @@ class Agents:
             in ranking information has given you unique insights into assessing and prioritizing 
             information based on its pertinence to a given query.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -256,7 +257,7 @@ class Agents:
             Your unique ability to identify key concepts and connect diverse information has aided numerous breakthroughs across various fields.
             You approach each task eagerly, seeing it as a chance to uncover and present crucial insights that empower decision-makers and innovators.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             cache=True,
@@ -274,7 +275,7 @@ class Agents:
             with relevant information, distilling complex data into clear, accurate answers. Known for your 
             precision and insight, you excel at crafting responses that directly address the heart of each query.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -294,7 +295,7 @@ class Agents:
             for accuracy, relevance, and completeness. You take pride in your ability to spot 
             discrepancies and suggest improvements, ensuring that every answer meets the highest standards.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             allow_delegation=False,
@@ -311,7 +312,7 @@ class Agents:
             talent for structuring information in ways that enhance its accessibility and usefulness 
             for future queries, ensuring that the knowledge base remains up-to-date and valuable.
             """,
-            verbose=True,
+            verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
             memory=True,
             cache=True,

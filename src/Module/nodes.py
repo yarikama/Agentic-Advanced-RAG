@@ -9,6 +9,10 @@ from pandas import DataFrame
 import json
 import pandas as pd
 from statistics import median
+from langgraph.constants import Send
+from Config.task_prompts import GLOBAL_TOPIC_RERANKING_PROMPT, LOCAL_TOPIC_RERANKING_PROMPT, RERANKING_PROMPT
+from langchain_openai import ChatOpenAI
+import Config.constants as const
 
 class NodesModularRAG():
     def __init__(self):
@@ -71,6 +75,20 @@ class NodesModularRAG():
         result.extend(list1[i:])
         result.extend(list2[j:])
         return result
+    
+    def sort_tuple_desc_and_filter_0_score(self, data: List[Tuple[str, int]])-> List[Tuple[str, int]]:
+        """
+        This function is used to sort the data in descending order and filter the data by the score.
+        args:
+            data: List[Tuple[str, int]]: the list of data to be sorted
+        returns:
+            sorted_data: List[str]: the list of data sorted in descending order without 0 score
+            sorted_data_with_scores: List[Tuple[str, int]]: the list of data with scores in descending order
+        """
+        filtered_data_with_scores = [data for data in data if data[1] > 0]
+        sorted_data_with_scores = sorted(filtered_data_with_scores, key=lambda x: x[1], reverse=True)
+        sorted_data = [data for data, _ in sorted_data_with_scores]
+        return sorted_data, sorted_data_with_scores
     
     def sort_data_desc_and_filter_0_score(self, data: List[str], scores: List[int])-> Tuple[List[str], List[Tuple[str, int]]]:
         """
@@ -176,9 +194,9 @@ class NodesModularRAG():
         
         # Assign the community to the agents
         batch_inputs = self.prepare_batch_input_for_reranking(
+            user_query=state.user_query,
             input_list=all_communities,
             sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
-            user_query=state.user_query
         )
             
         all_scores = self.rag_system.global_topic_reranking_run_batch_async(node_batch_inputs=batch_inputs).relevant_scores        
@@ -220,33 +238,33 @@ class NodesModularRAG():
         # judge the top_k, top_community, top_inside_relations from the score
         scope_score = state.user_query_classification_result.domain_range_score
         if scope_score >= 61:
-            top_entities                = 5
-            top_chunks                  = 2
-            top_communities             = 10
-            top_relationships           = 10
-            top_outside_relationships   = 5
-            top_inside_relationships    = 5
+            top_entities              = 5
+            top_chunks                = 2
+            top_communities           = 10
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
         elif scope_score >= 41:
-            top_entities                = 7
-            top_chunks                  = 5
-            top_communities             = 5
-            top_relationships           = 10
-            top_outside_relationships   = 5
-            top_inside_relationships    = 5
+            top_entities              = 7
+            top_chunks                = 5
+            top_communities           = 5
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
         elif scope_score >= 21:
-            top_entities                = 10
-            top_chunks                  = 8
-            top_communities             = 4
-            top_relationships           = 10
-            top_outside_relationships   = 5
-            top_inside_relationships    = 5
+            top_entities              = 10
+            top_chunks                = 8
+            top_communities           = 4
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
         else:
-            top_entities                = 12
-            top_chunks                  = 12
-            top_communities             = 3
-            top_relationships           = 10
-            top_outside_relationships   = 5
-            top_inside_relationships    = 5
+            top_entities              = 12
+            top_chunks                = 12
+            top_communities           = 3
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
             
         
         # get the results from the local retriever
@@ -258,10 +276,10 @@ class NodesModularRAG():
             top_relationships       = top_relationships
         )
             
-        relationship_vector_chunks_texts                    = relationship_vector_results["chunks_texts"]
-        relationship_vector_entity_descriptions             = relationship_vector_results["entity_descriptions"]
-        relationship_vector_community_summaries             = relationship_vector_results["community_summaries"]
-        relationship_vector_relationship_descriptions       = relationship_vector_results["relationship_descriptions"]
+        relationship_vector_chunks_texts              = relationship_vector_results["chunks_texts"]
+        relationship_vector_entity_descriptions       = relationship_vector_results["entity_descriptions"]
+        relationship_vector_community_summaries       = relationship_vector_results["community_summaries"]
+        relationship_vector_relationship_descriptions = relationship_vector_results["relationship_descriptions"]
         
         
         entity_keyword_results = self.retriever.local_retrieve_entity_keyword_search(
@@ -279,15 +297,15 @@ class NodesModularRAG():
         entity_keyword_outside_relationship_descriptions = entity_keyword_results["outside_relationship_descriptions"]
         
         # use the results to run the topic reranking
-        all_information = list(set( relationship_vector_chunks_texts
-                                +   relationship_vector_community_summaries
-                                +   relationship_vector_entity_descriptions
-                                +   relationship_vector_relationship_descriptions
-                                +   entity_keyword_chunks_texts
-                                +   entity_keyword_entity_descriptions
-                                +   entity_keyword_community_summaries
-                                +   entity_keyword_inside_relationship_descriptions
-                                +   entity_keyword_outside_relationship_descriptions))
+        all_information = list(set(relationship_vector_chunks_texts
+                                  +relationship_vector_community_summaries
+                                  +relationship_vector_entity_descriptions
+                                  +relationship_vector_relationship_descriptions
+                                  +entity_keyword_chunks_texts
+                                  +entity_keyword_entity_descriptions
+                                  +entity_keyword_community_summaries
+                                  +entity_keyword_inside_relationship_descriptions
+                                  +entity_keyword_outside_relationship_descriptions))
 
         # Batch the information
         batch_inputs = self.prepare_batch_input_for_reranking(
@@ -508,6 +526,209 @@ class NodesModularRAG():
             return "global retriever"
         else:
             return "local retriever"
+        
+    def dispatch_global_mapping_cnode(self, state: OverallState):
+        all_communities = self.retriever.global_retrieve(self.global_retrieval_level)["community_summaries"]
+        batches = self.prepare_batch_input_for_reranking(
+            input_list=all_communities,
+            sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
+            user_query=state.user_query
+        )
+        return [Send("global_mapping_node", 
+                     {
+                        "batch_input": batch,
+                        "number_ticket": i,
+                     }
+                    ) for i, batch in enumerate(batches)]
+        
+    def global_mapping_node(self, state: RerankingState):
+        prompt = GLOBAL_TOPIC_RERANKING_PROMPT.format(
+            user_query=state.batch_input["user_query"],
+            sub_queries=state.batch_input["sub_queries"],
+            batch_data=state.batch_input["input_list"]
+        )
+        llm = ChatOpenAI(
+            model=const.MODEL_NAME,
+            temperature=const.MODEL_TEMPERATURE,
+        )
+        scores = llm.with_structured_output(TopicRerankingResult).invoke(prompt).relevant_scores
+        data_with_scores = list(zip(state.batch_input["input_list"], scores))
+        return {"global_mapping_result": data_with_scores}
+    
+    
+    def global_reducing_node(self, state: OverallState):
+        sorted_data, sorted_data_with_scores = self.sort_data_desc_and_filter_0_score(state.global_mapping_result)
+        global_reducing_results = self.rag_system.global_topic_searching_run(
+            user_query=state.user_query,
+            sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
+            data=sorted_data
+        )
+        return {"global_topic_searching_and_hyde_result": GlobalTopicSearchingAndHyDEResult(
+            communities_with_scores = sorted_data_with_scores,
+            communities_summaries = global_reducing_results.communities_summaries,
+            possible_answers = global_reducing_results.possible_answers,
+        )}
+        
+    
+
+    
+    def dispatch_local_mapping_cnode(self, state: OverallState):
+        scope_score = state.user_query_classification_result.domain_range_score
+        if scope_score >= 61:
+            top_entities              = 5
+            top_chunks                = 2
+            top_communities           = 10
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
+        elif scope_score >= 41:
+            top_entities              = 7
+            top_chunks                = 5
+            top_communities           = 5
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
+        elif scope_score >= 21:
+            top_entities              = 10
+            top_chunks                = 8
+            top_communities           = 4
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
+        else:
+            top_entities              = 12
+            top_chunks                = 12
+            top_communities           = 3
+            top_relationships         = 10
+            top_inside_relationships  = 5
+            top_outside_relationships = 5
+            
+        
+        # get the results from the local retriever
+        relationship_vector_results = self.retriever.local_retrieve_relationship_vector_search(
+            query_texts             = [state.user_query], 
+            top_entities            = top_entities,
+            top_chunks              = top_chunks,
+            top_communities         = top_communities,
+            top_relationships       = top_relationships
+        )
+            
+        relationship_vector_chunks_texts              = relationship_vector_results["chunks_texts"]
+        relationship_vector_entity_descriptions       = relationship_vector_results["entity_descriptions"]
+        relationship_vector_community_summaries       = relationship_vector_results["community_summaries"]
+        relationship_vector_relationship_descriptions = relationship_vector_results["relationship_descriptions"]
+        
+        entity_keyword_results = self.retriever.local_retrieve_entity_keyword_search(
+            keywords                     =    state.user_query_classification_result.relevant_keywords,
+            top_entities                 =    top_entities,
+            top_chunks                   =    top_chunks,
+            top_communities              =    top_communities,
+            top_inside_relationships     =    top_inside_relationships,
+            top_outside_relationships    =    top_outside_relationships
+        )
+        entity_keyword_chunks_texts                      = entity_keyword_results["chunks_texts"]
+        entity_keyword_entity_descriptions               = entity_keyword_results["entity_descriptions"]
+        entity_keyword_community_summaries               = entity_keyword_results["community_summaries"]
+        entity_keyword_inside_relationship_descriptions  = entity_keyword_results["inside_relationship_descriptions"]
+        entity_keyword_outside_relationship_descriptions = entity_keyword_results["outside_relationship_descriptions"]
+        
+        # use the results to run the topic reranking
+        all_information = list(set( relationship_vector_chunks_texts
+                                  + relationship_vector_community_summaries
+                                  + relationship_vector_entity_descriptions
+                                  + relationship_vector_relationship_descriptions
+                                  + entity_keyword_chunks_texts
+                                  + entity_keyword_entity_descriptions
+                                  + entity_keyword_community_summaries
+                                  + entity_keyword_inside_relationship_descriptions
+                                  + entity_keyword_outside_relationship_descriptions))
+        
+        batches = self.prepare_batch_input_for_reranking(
+            input_list=all_information,
+            sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
+            user_query=state.user_query
+        )
+        
+        return [Send("local_mapping_node", 
+                     {
+                        "batch_input": batch,
+                        "number_ticket": i,
+                     }
+                    ) for i, batch in enumerate(batches)]
+    
+    def local_mapping_node(self, state: RerankingState):
+        prompt = LOCAL_TOPIC_RERANKING_PROMPT.format(
+            user_query=state.batch_input["user_query"],
+            sub_queries=state.batch_input["sub_queries"],
+            batch_data=state.batch_input["input_list"]
+        )
+        llm = ChatOpenAI(
+            model=const.MODEL_NAME,
+            temperature=const.MODEL_TEMPERATURE,
+        )
+        scores = llm.with_structured_output(TopicRerankingResult).invoke(prompt).relevant_scores
+        data_with_scores = list(zip(state.batch_input["input_list"], scores))
+        return {"local_mapping_result": data_with_scores}
+    
+    def local_reducing_node(self, state: OverallState):
+        sorted_data, sorted_data_with_scores = self.sort_data_desc_and_filter_0_score(state.local_mapping_result)
+        local_reducing_results = self.rag_system.local_topic_searching_run(
+            user_query=state.user_query,
+            sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
+            data=sorted_data
+        )
+        return {"local_topic_searching_and_hyde_result": LocalTopicSearchingAndHyDEResult(
+            information_with_scores = sorted_data_with_scores,
+            information_summaries = local_reducing_results.information_summaries,
+            possible_answers = local_reducing_results.possible_answers,
+        )}    
+    
+    def dispatch_detail_mapping_cnode(self, state: OverallState):
+        all_queries = [state.user_query]
+        if state.sub_queries_classification_result and state.sub_queries_classification_result.queries:
+            all_queries.extend(state.sub_queries_classification_result.queries)
+        if state.local_topic_searching_and_hyde_result:
+            all_queries.extend(state.local_topic_searching_and_hyde_result.possible_answers)
+        if state.global_topic_searching_and_hyde_result:
+            all_queries.extend(state.global_topic_searching_and_hyde_result.possible_answers)    
+        retrieved_data = self.retriever.hybrid_retrieve(state.specific_collection, all_queries, 10)
+        batches = self.prepare_batch_input_for_reranking(
+            input_list=retrieved_data,
+            sub_queries=state.sub_queries_classification_result.queries if state.sub_queries_classification_result else [],
+            user_query=state.user_query
+        )
+        return [Send("detail_mapping_node", 
+                     {
+                        "batch_input": batch,
+                        "number_ticket": i,
+                     }
+                    ) for i, batch in enumerate(batches)]
+        
+    def detail_mapping_node(self, state: RerankingState):
+        prompt = RERANKING_PROMPT.format(
+            user_query=state.batch_input["user_query"],
+            sub_queries=state.batch_input["sub_queries"],
+            batch_data=state.batch_input["input_list"]
+        )
+        llm = ChatOpenAI(
+            model=const.MODEL_NAME,
+            temperature=const.MODEL_TEMPERATURE,
+        )
+        scores = llm.with_structured_output(TopicRerankingResult).invoke(prompt).relevant_scores
+        data_with_scores = list(zip(state.batch_input["input_list"], scores))
+        return {"detail_mapping_result": data_with_scores}
+    
+    def detail_reducing_node(self, state: OverallState):
+        all_data_with_scores = []
+        if state.local_topic_searching_and_hyde_result:
+            all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, state.local_topic_searching_and_hyde_result.information_with_scores)
+        if state.global_topic_searching_and_hyde_result:
+            all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, state.global_topic_searching_and_hyde_result.communities_with_scores)
+        if state.detailed_search_result:
+            all_data_with_scores = self.sort_two_descending_list(all_data_with_scores, state.detailed_search_result.sorted_retrieved_data_with_scores)
+        all_data = [data for data, _ in all_data_with_scores]
+        concise_all_data = all_data[:max(len(all_data)*3//4, 1)]
+        return {"detailed_search_result": DetailedSearchResult(sorted_retrieved_data=concise_all_data)}
     
 class NodesMultiAgentRAG():
     def __init__(self, 
