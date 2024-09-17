@@ -195,7 +195,7 @@ class VectorDatabase:
         collection = self.get_collection(collection_name)
         collection.load()
         
-        iterator = collection.query_iterator(batch_size=16384,
+        iterator = collection.query_iterator(batch_size=10000,
                                              expr="id > 0",
                                              output_fields=["id","dense_vector","content","metadata"],)  
 
@@ -216,8 +216,9 @@ class VectorDatabase:
                 }
                 all_data.append(record)
         df = pd.DataFrame(all_data)
+        df = df.sort_values(by='id').reset_index(drop=True)
         
-        file_name = f'../tests/{collection_name}_all_entities.parquet'
+        file_name = f'.parquet/{collection_name}_all_entities.parquet'
         df.to_parquet(file_name, index=False)
         
         return df
