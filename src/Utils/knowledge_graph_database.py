@@ -92,8 +92,8 @@ class KnowledgeGraphDatabase:
         Returns:
             int: The number of rows imported.
         """
-        total = len(df)
         start_s = time.time()
+        total = len(df)
         for start in range(0,total, batch_size):
             batch = df.iloc[start: min(start+batch_size,total)]
             result = self.driver.execute_query(

@@ -46,6 +46,9 @@ ipykernel = "^6.29.5"
 jupyter = "^1.1.1"
 notebook = "^7.2.2"
 beautifulsoup4 = "^4.12.3"
+anthropic = "^0.34.2"
+google-generativeai = "^0.8.1"
+cohere = "^5.9.2"
 
 
 [tool.poetry.group.dev.dependencies]

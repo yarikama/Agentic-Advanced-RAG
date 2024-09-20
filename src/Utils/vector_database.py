@@ -8,7 +8,7 @@ from lshashpy3 import LSHash
 from collections import Counter
 from typing import List, Dict, Any
 from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient, AnnSearchRequest
-
+import warnings
 class VectorDatabase:
     def __init__(self, 
                 host: str = const.MILVUS_HOST, 
@@ -46,19 +46,26 @@ class VectorDatabase:
     def create_collection(self, 
                         collection_name: str, 
                         dense_dim: int = const.EMBEDDING_DENSE_DIM,
+                        is_document_mapping: bool = const.IS_DOCUMENT_MAPPING
                         ):
 
         if self.client.has_collection(collection_name):
-            raise ValueError(f"Collection {collection_name} already exists.")
+            warnings.warn(f"Collection {collection_name} already exists, skipping creation.")
+            return
 
         fields = [
             FieldSchema(name="id", dtype=DataType.INT64, is_primary=True, auto_id=True),
             FieldSchema(name="dense_vector", dtype=DataType.FLOAT_VECTOR, dim=dense_dim),
             FieldSchema(name="sparse_vector", dtype=DataType.SPARSE_FLOAT_VECTOR),
             FieldSchema(name="content", dtype=DataType.VARCHAR, max_length=65535),
-            FieldSchema(name="metadata", dtype=DataType.VARCHAR, max_length=512)
+            FieldSchema(name="metadata", dtype=DataType.VARCHAR, max_length=1024)
         ]
         
+        print(f"Creating collection {collection_name} with fields: {fields}")
+        
+        if is_document_mapping:
+            fields.append(FieldSchema(name="doc_id", dtype=DataType.STRING, max_length=512))
+                                      
         schema = CollectionSchema(
             fields, 
             description=f"Hybrid collection for dense and sparse vector embeddings of {collection_name}.",
@@ -71,7 +78,7 @@ class VectorDatabase:
             using=self.database_name
         )
         
-        print(f"Successfully created collection {collection_name} with dense dimension {dense_dim} and sparse embeddings.")
+        print(f"Successfully created collection {collection_name} with dense embeddings (dense dim: {dense_dim}) and sparse embeddings.")
 
         if const.IS_GPU_INDEX:
             dense_index_params = {
@@ -151,7 +158,7 @@ class VectorDatabase:
                     search_requests, 
                     rerank_type: str = const.RERANK_TYPE,
                     weights: List[float] = const.RERANK_WEIGHTS,    
-                    top_k: int = const.TOP_K
+                    top_k: int = const.TOP_K,
                     ) -> List[Dict[str, Any]]:
         """
         This function is used to perform a hybrid search on the vector database.

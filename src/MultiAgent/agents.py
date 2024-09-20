@@ -145,7 +145,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -164,7 +164,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -183,7 +183,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -204,7 +204,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -223,7 +223,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -242,7 +242,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -259,7 +259,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             cache=True,
             allow_delegation=False,
     #         callbacks=[self.callback_function],   
@@ -277,7 +277,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -297,7 +297,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
 #             callbacks=[self.callback_function],
         )
@@ -314,7 +314,7 @@ class Agents:
             """,
             verbose=const.CREWAI_AGENT_VERBOSE,
             llm=self.llm,
-            memory=True,
+            memory=const.CREWAI_AGENT_MEMORY,
             cache=True,
             allow_delegation=False,
 #             callbacks=[self.callback_function],

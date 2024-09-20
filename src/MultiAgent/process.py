@@ -364,7 +364,7 @@ class MultiAgent_RAG:
                          "retrieved_data": kwargs.get("retrieved_data"),
                          "sub_queries": kwargs.get("sub_queries")}
         )
-        return self.tasks.create_information_organization_task.output.raw
+        return self.tasks.create_information_organization_task.output.pydantic
     
     def generation_run(self, **kwargs):
         """
@@ -382,7 +382,10 @@ class MultiAgent_RAG:
             node_tasks=["Generation"],
             node_process="Sequential",
             node_inputs={"user_query": kwargs.get("user_query"),
-                         "sub_queries": kwargs.get("sub_queries")} 
+                         "sub_queries": kwargs.get("sub_queries"),
+                         "information": kwargs.get("information"),
+                         "retrieval_needed": kwargs.get("retrieval_needed")
+                         } 
         )
         return self.tasks.create_generation_task.output.raw
     

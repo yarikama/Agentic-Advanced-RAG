@@ -52,7 +52,7 @@ MODEL_NAME = "gpt-4o-mini"
 MODEL_TEMPERATURE = 0.1
 
 # Node Settings:
-NODE_BATCH_SIZE = 7
+NODE_BATCH_SIZE = 4
 NODE_RETRIEVAL_LEVEL = 0
 
 # For Neo4j Settings:
@@ -70,7 +70,12 @@ NEO4J_TOP_RELATIONSHIPS = 5
 
 # For MultiAgent Settings:
 CREWAI_AGENT_VERBOSE = False
+CREWAI_AGENT_MEMORY = False
 CREWAI_PROCESS_VERBOSE = False
+
 
 # For Pydantic Reducer Settings:
 RESET_LIST = [("RESET",-1)]
+
+# For Vector Database Settings:
+IS_DOCUMENT_MAPPING = False

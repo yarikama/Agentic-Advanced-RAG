@@ -40,6 +40,13 @@ class Retriever:
         print("Retriever initialized")
 
     def generate_hypothetical_document(self, query: str) -> List[str]:
+        """
+        This function is used to generate hypothetical documents for the given query.
+        Args:
+            query: str -> The query to generate hypothetical documents
+        Returns:
+            List[str] -> The generated hypothetical documents
+        """
         prompt = HYDE_PROMPT.format(query=query)
         hyde_llm = ChatOpenAI(
             model=const.MODEL_NAME,
@@ -212,7 +219,8 @@ class Retriever:
     
     def local_retrieve_entity_vector_search(self, 
                     query_texts: List[str],
-                    top_entities: int = const.NEO4J_TOP_ENTITIES,
+                    top_searching_entities: int = const.NEO4J_TOP_ENTITIES,
+                    top_retrieving_entities: int = const.NEO4J_TOP_ENTITIES,
                     top_chunks: int = const.NEO4J_TOP_CHUNKS,
                     top_communities: int = const.NEO4J_TOP_COMMUNITIES,
                     top_outside_relationships: int = const.NEO4J_TOP_OUTSIDE_RELATIONSHIPS,
@@ -221,7 +229,8 @@ class Retriever:
         This function is used to retrieve the local search results from the graph database.
         Args:
             query_texts: List[str] -> Input all the queries
-            top_entities: int -> the number of the top entities
+            top_searching_entities: int -> the number of the top entities to search
+            top_retrieving_entities: int -> the number of the top entities to retrieve
             top_chunks: int -> the number of the top chunks
             top_communities: int -> the number of the top communities
             top_outside_relationships: int -> the number of the top outside relationships
@@ -239,7 +248,7 @@ class Retriever:
         result = self.graphdatabase.dictionary_query_result("""
         // Using the query vectors to retrieve the entities
         UNWIND $queries_vectors AS query_vector
-        CALL db.index.vector.queryNodes('entity_description_vector_index', $topEntities, query_vector) YIELD node
+        CALL db.index.vector.queryNodes('entity_description_vector_index', $topSearchingEntities, query_vector) YIELD node
         WITH COLLECT(DISTINCT node) AS retrieved_entities
         
         // Chunk - Entity Mapping
@@ -295,6 +304,7 @@ class Retriever:
             WITH entity
             WHERE entity.description IS NOT NULL AND entity.description <> ''
             RETURN entity.description AS descriptionText
+            LIMIT $topRetrievingEntities
         } as entity_descriptions,
         
         // Entities name
@@ -303,13 +313,15 @@ class Retriever:
             WITH entity
             WHERE entity.name IS NOT NULL AND entity.name <> ''
             RETURN entity.name AS name
+            LIMIT $topRetrievingEntities
         } as entity_names
         
         RETURN entity_names, entity_descriptions, chunks_texts, community_summaries, inside_relationship_descriptions, outside_relationship_descriptions
         """, 
         params={
             "queries_vectors": queries_vectors,
-            "topEntities": top_entities,
+            "topSearchingEntities": top_searching_entities,
+            "topRetrievingEntities": top_retrieving_entities,
             "topChunks": top_chunks,
             "topCommunities": top_communities,
             "topOutsideRelationships": top_outside_relationships,
@@ -320,7 +332,6 @@ class Retriever:
     
     def local_retrieve_entity_keyword_search(self, 
                     keywords: List[str],
-                    top_entities: int = const.NEO4J_TOP_ENTITIES,
                     top_chunks: int = const.NEO4J_TOP_CHUNKS,
                     top_communities: int = const.NEO4J_TOP_COMMUNITIES,
                     top_outside_relationships: int = const.NEO4J_TOP_OUTSIDE_RELATIONSHIPS,
@@ -329,7 +340,6 @@ class Retriever:
         This function is used to retrieve the local search results from the graph database.
         Args:
             keywords: List[str] -> Input all the keywords
-            top_entities: int -> the number of the top entities
             top_chunks: int -> the number of the top chunks
             top_communities: int -> the number of the top communities
             top_outside_relationships: int -> the number of the top outside relationships
@@ -417,7 +427,6 @@ class Retriever:
         """, 
         params={
             "keywords": keywords,
-            "topEntities": top_entities,
             "topChunks": top_chunks,
             "topCommunities": top_communities,
             "topOutsideRelationships": top_outside_relationships,
@@ -431,7 +440,8 @@ class Retriever:
                                                 top_entities: int = const.NEO4J_TOP_ENTITIES,
                                                 top_chunks: int = const.NEO4J_TOP_CHUNKS,
                                                 top_communities: int = const.NEO4J_TOP_COMMUNITIES,
-                                                top_relationships: int = const.NEO4J_TOP_RELATIONSHIPS) -> Dict[str, Any]:
+                                                top_searching_relationships: int = const.NEO4J_TOP_RELATIONSHIPS,
+                                                top_retrieving_relationships: int = const.NEO4J_TOP_RELATIONSHIPS) -> Dict[str, Any]:
         """
         This function is used to retrieve the local search results from the graph database.
         Args:
@@ -439,7 +449,8 @@ class Retriever:
             top_entities: int -> the number of the top entities
             top_chunks: int -> the number of the top chunks
             top_communities: int -> the number of the top communities
-            top_relationships: int -> the number of the top relationships
+            top_searching_relationships: int -> the number of the top relationships to search
+            top_retrieving_relationships: int -> the number of the top relationships to retrieve
         Returns:
             result: Dict[str, List[str]]
                 - entity_descriptions: List[str]
@@ -452,7 +463,7 @@ class Retriever:
         result = self.graphdatabase.dictionary_query_result("""
         // Using the query vectors to retrieve the relationships
         UNWIND $queries_vectors AS query_vector
-        CALL db.index.vector.queryRelationships('relationship_description_vector_index', $topRelationships, query_vector) YIELD relationship
+        CALL db.index.vector.queryRelationships('relationship_description_vector_index', $topSearchingRelationships, query_vector) YIELD relationship
         WITH COLLECT(DISTINCT relationship) AS retrieved_relationships
         WITH COLLECT {
             UNWIND retrieved_relationships as relationship
@@ -460,6 +471,7 @@ class Retriever:
             WHERE relationshipRankWeightPair.relationshipDescription IS NOT NULL AND relationshipRankWeightPair.relationshipDescription <> ''
             RETURN relationshipRankWeightPair.relationshipDescription AS relationshipDescription
             ORDER BY relationshipRankWeightPair.rank, relationshipRankWeightPair.weight DESC
+            LIMIT $topRetrievingRelationships
         } AS relationship_descriptions,
         
         // Chunk - Entity Mapping
@@ -515,9 +527,10 @@ class Retriever:
         RETURN entity_descriptions, entity_names, relationship_descriptions, community_summaries, chunks_texts
         """, 
         params={
+            "topRetrievingRelationships": top_retrieving_relationships,
+            "topSearchingRelationships": top_searching_relationships,
             "queries_vectors": queries_vectors,
             "topEntities": top_entities,
-            "topRelationships": top_relationships,
             "topChunks": top_chunks,
             "topCommunities": top_communities,
         })
@@ -526,16 +539,15 @@ class Retriever:
     
     def local_retrieve_community_vector_search(self, 
                                                 query_texts: List[str],
-                                                top_communities: int = const.NEO4J_TOP_COMMUNITIES,
+                                                top_searching_communities: int = const.NEO4J_TOP_COMMUNITIES,
+                                                top_retrieving_communities: int = const.NEO4J_TOP_COMMUNITIES,
                                               ) -> Dict[str, Any]:
         """
         This function is used to retrieve the local search results from the graph database.
         Args:
             query_texts: List[str] -> Input all the queries
-            top_communities: int -> the number of the top communities
-            top_chunks: int -> the number of the top chunks
-            top_entities: int -> the number of the top entities
-            top_relationships: int -> the number of the top relationships
+            top_searching_communities: int -> the number of the top communities to search
+            top_retrieving_communities: int -> the number of the top communities to retrieve
         Returns:
             result: Dict[str, List[str]]
                 - community_summaries: List[str]
@@ -546,19 +558,20 @@ class Retriever:
         result = self.graphdatabase.dictionary_query_result("""
         // Using the query vectors to retrieve the communities
         UNWIND $queries_vectors AS query_vector
-        CALL db.index.vector.queryNodes('community_summary_vector_index', $topCommunities, query_vector) YIELD node
+        CALL db.index.vector.queryNodes('community_summary_vector_index', $topSearchingCommunities, query_vector) YIELD node
         WITH COLLECT(DISTINCT node) AS retrieved_communities
         WITH COLLECT {
             UNWIND retrieved_communities as community
             RETURN community.summary AS communitySummary
             ORDER BY community.rank DESC
+            LIMIT $topRetrievingCommunities
         } AS community_summaries
         RETURN community_summaries
         """, 
         params={
             "queries_vectors": queries_vectors,
-            "topCommunities": top_communities,
+            "topSearchingCommunities": top_searching_communities,
+            "topRetrievingCommunities": top_retrieving_communities,
         })
-
         return result
                

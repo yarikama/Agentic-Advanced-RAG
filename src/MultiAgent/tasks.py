@@ -24,7 +24,7 @@ class Tasks:
         self.create_retrieval_detail_data_from_topic_task                         = self._retrieval_detail_data_from_topic_task()
         self.create_reranking_task                                                = self._reranking_task([self.create_retrieval_task, self.create_retrieval_detail_data_from_topic_task])
         self.create_information_organization_task                                 = self._information_organization_task()
-        self.create_generation_task                                               = self._generation_task([self.create_information_organization_task])
+        self.create_generation_task                                               = self._generation_task()
         self.create_response_audit_task                                           = self._response_audit_task([self.create_generation_task])
         self.create_database_update_task_with_specific_collection                 = self._database_update_task_with_specific_collection([self.create_response_audit_task])
         self.create_database_update_task_without_specific_collection              = self._database_update_task_without_specific_collection([self.create_response_audit_task])
@@ -239,10 +239,11 @@ class Tasks:
         return Task(
             agent=self.agents.create_information_organizer,
             description=INFORMATION_ORGANIZATION_PROMPT,
+            output_pydantic=InformationOrganizationResult,
             expected_output=INFORMATION_ORGANIZATION_EXPECTED_OUTPUT,
         )
         
-    def _generation_task(self, context_task_array: List[Task]):
+    def _generation_task(self):
         """
         Task to generate the response from the retrieved data to the user query
         args: user_query
@@ -251,7 +252,7 @@ class Tasks:
             agent=self.agents.create_generator,
             description=GENERATION_PROMPT,
             expected_output=GENERATION_EXPECTED_OUTPUT,
-            context=context_task_array,
+            # context=context_task_array,
         )
         
     def _response_audit_task(self, context_task_array: List[Task]):
