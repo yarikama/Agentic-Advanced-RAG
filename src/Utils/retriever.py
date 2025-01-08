@@ -45,13 +45,6 @@ class Retriever:
         print("Retriever initialized")
         
     def generate_hypothetical_document(self, query: str) -> List[str]:
-        """
-        This function is used to generate hypothetical documents for the given query.
-        Args:
-            query: str -> The query to generate hypothetical documents
-        Returns:
-            List[str] -> The generated hypothetical documents
-        """
         prompt = HYDE_PROMPT.format(query=query)
         hyde_llm = ChatOpenAI(
             model=const.MODEL_NAME,
@@ -60,9 +53,12 @@ class Retriever:
         response = hyde_llm.with_structured_output(HyDEOutput).invoke(prompt)
         return response.possible_answers
 
-    def dense_search_request(self, 
-                            dense_query_vectors: Union[List[float], List[List[float]]], 
-                            field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+    def dense_search_request(
+        self, 
+        dense_query_vectors: Union[List[float], List[List[float]]], 
+        field_name: str,
+        top_k: int = const.TOP_K
+    ) -> List[Dict[str, Any]]:
         
         if const.IS_GPU_INDEX:
             dense_search_param = {
@@ -94,9 +90,12 @@ class Retriever:
         dense_search_request = AnnSearchRequest(**dense_search_param)
         return dense_search_request 
 
-    def sparse_search_request(self, 
-                              sparse_query_vectors: Union[List[float], List[List[float]]], 
-                              field_name: str, top_k: int = const.TOP_K) -> List[Dict[str, Any]]:
+    def sparse_search_request(
+        self, 
+        sparse_query_vectors: Union[List[float], List[List[float]]], 
+        field_name: str, 
+        top_k: int = const.TOP_K
+    ) -> List[Dict[str, Any]]:
         
         sparse_search_param = {
             "data": sparse_query_vectors,
@@ -117,12 +116,14 @@ class Retriever:
         hybrid_search_requests = [dense_search_request, sparse_search_request]
         return hybrid_search_requests
 
-    def hybrid_retrieve(self, 
-                        collection_name: str, 
-                        query_texts: List[str], 
-                        top_k: int = const.TOP_K, 
-                        alpha: float = const.ALPHA, 
-                        isHyDE: bool = False) -> List[Dict[str, Any]]:
+    def hybrid_retrieve(
+        self, 
+        collection_name: str, 
+        query_texts: List[str], 
+        top_k: int = const.TOP_K, 
+        alpha: float = const.ALPHA, 
+        isHyDE: bool = False
+    ) -> List[Dict[str, Any]]:
         """
         This is for similar multiple queries searching, the result is a deduplicated list of documents
         Args:
