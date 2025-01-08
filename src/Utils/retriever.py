@@ -20,18 +20,22 @@ class Retriever:
     _instance = None
 
     @classmethod
-    def get_instance(cls, 
-                     vectordatabase: Optional[VectorDatabase] = None,
-                     graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
-                     embedder: Optional[Embedder] = None):
+    def get_instance(
+        cls, 
+        vectordatabase: Optional[VectorDatabase] = None,
+        graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
+        embedder: Optional[Embedder] = None
+    ) -> 'Retriever':
         if cls._instance is None:
             cls._instance = cls(vectordatabase, graphdatabase, embedder)
         return cls._instance
 
-    def __init__(self, 
-                vectordatabase: Optional[VectorDatabase] = None,
-                graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
-                embedder: Optional[Embedder] = None):
+    def __init__(
+        self, 
+        vectordatabase: Optional[VectorDatabase] = None,
+        graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
+        embedder: Optional[Embedder] = None
+    ) -> 'Retriever':
         
         self.embedder = embedder if embedder else Embedder()
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
@@ -39,7 +43,7 @@ class Retriever:
         self.openai_api_key = os.getenv("OPENAI_API_KEY")
         self.client = OpenAI(api_key=self.openai_api_key)
         print("Retriever initialized")
-
+        
     def generate_hypothetical_document(self, query: str) -> List[str]:
         """
         This function is used to generate hypothetical documents for the given query.
@@ -219,14 +223,16 @@ class Retriever:
         )
         return all_community_summaries
     
-    def local_retrieve_entity_vector_search(self, 
-                    query_texts: List[str],
-                    top_searching_entities: int = const.NEO4J_TOP_ENTITIES,
-                    top_retrieving_entities: int = const.NEO4J_TOP_ENTITIES,
-                    top_chunks: int = const.NEO4J_TOP_CHUNKS,
-                    top_communities: int = const.NEO4J_TOP_COMMUNITIES,
-                    top_outside_relationships: int = const.NEO4J_TOP_OUTSIDE_RELATIONSHIPS,
-                    top_inside_relationships: int = const.NEO4J_TOP_INSIDE_RELATIONSHIPS) -> Dict[str, Any]:
+    def local_retrieve_entity_vector_search(
+        self, 
+        query_texts: List[str],
+        top_searching_entities: int = const.NEO4J_TOP_ENTITIES,
+        top_retrieving_entities: int = const.NEO4J_TOP_ENTITIES,
+        top_chunks: int = const.NEO4J_TOP_CHUNKS,
+        top_communities: int = const.NEO4J_TOP_COMMUNITIES,
+        top_outside_relationships: int = const.NEO4J_TOP_OUTSIDE_RELATIONSHIPS,
+        top_inside_relationships: int = const.NEO4J_TOP_INSIDE_RELATIONSHIPS
+    ) -> Dict[str, Any]:
         """
         This function is used to retrieve the local search results from the graph database.
         Args:
