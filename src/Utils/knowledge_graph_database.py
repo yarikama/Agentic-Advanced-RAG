@@ -21,7 +21,11 @@ class KnowledgeGraphDatabase:
         )       
         print("GraphDatabase initialized.")
         
-    def dictionary_query_result(self, cypher: str, params: Dict[str, Any] = {}) -> Dict[str, Any]:
+    def dictionary_query_result(
+        self, 
+        cypher: str,
+        params: Dict[str, Any] = {}
+    ) -> Dict[str, Any]:
         """
         Execute a Cypher query and return the result as a dictionary.
         
@@ -135,10 +139,7 @@ class KnowledgeGraphDatabase:
         print("Constraints created.")
     
     def import_documents(self, data_path):
-        document_df = pd.read_parquet(f'{data_path}/create_final_documents.parquet')
-        # print("Documents DataFrame head:")
-        # print(document_df.head(2))
-        
+        document_df = pd.read_parquet(f'{data_path}/create_final_documents.parquet')        
         document_statement = """
         // SET DOCUMENT AND ITS PROPERTIES
         MERGE (document:__Document__ {id:value.id})
@@ -148,10 +149,7 @@ class KnowledgeGraphDatabase:
         print("Documents imported.")
 
     def import_text_units(self, data_path):
-        text_df = pd.read_parquet(f'{data_path}/create_final_text_units.parquet')
-        # print("Text Units DataFrame head:")
-        # print(text_df.head(2))
-        
+        text_df = pd.read_parquet(f'{data_path}/create_final_text_units.parquet')        
         text_statement = """
         // SET CHUNK AND ITS PROPERTIES
         MERGE (chunk:__Chunk__ {id:value.id})
@@ -168,9 +166,6 @@ class KnowledgeGraphDatabase:
 
     def import_entities(self, data_path):
         entity_df = pd.read_parquet(f'{data_path}/create_final_entities.parquet')
-        # print("Entities DataFrame head:")
-        # print(entity_df.head(2))
-        
         entity_statement = """
         // SET ENTITY AND ITS PROPERTIES
         MERGE (entity:__Entity__ {id:value.id})
@@ -191,9 +186,6 @@ class KnowledgeGraphDatabase:
         
     def import_relationships(self, data_path):
         relationship_df = pd.read_parquet(f'{data_path}/create_final_relationships.parquet')
-        # print("Relationships DataFrame head:")
-        # print(relationship_df.head(2))
-        
         relationship_statement = """
         // SET RELATIONSHIP AND ITS PROPERTIES
         MATCH (source_entity:__Entity__ {name:replace(value.source,'"','')})
@@ -211,9 +203,6 @@ class KnowledgeGraphDatabase:
         
     def import_communities(self, data_path):
         community_df = pd.read_parquet(f'{data_path}/create_final_communities.parquet')
-        # print("Communities DataFrame head:")
-        # print(community_df.head(2))
-        
         community_statement = """
         // SET COMMUNITY AND ITS PROPERTIES
         MERGE (community:__Community__ {id:value.id})
@@ -240,9 +229,6 @@ class KnowledgeGraphDatabase:
 
     def import_community_reports(self, data_path):
         community_report_df = pd.read_parquet(f'{data_path}/create_final_community_reports.parquet')
-        # print("Community Reports DataFrame head:")
-        # print(community_report_df.head(2))
-        
         community_report_statement = """
         // SET COMMUNITY REPORT AND ITS PROPERTIES
         MERGE (community:__Community__ {id:value.community})
@@ -264,9 +250,6 @@ class KnowledgeGraphDatabase:
 
     def import_covariates(self, data_path):
         covariate_df = pd.read_parquet(f'{data_path}/create_final_covariates.parquet')
-        # print("Covariates DataFrame head:")
-        # print(covariate_df.head(2))
-        
         covariate_statement = """
         MERGE (covariate:__Covariate__ {id:value.id})
         SET covariate += apoc.map.clean(value, ["text_unit_id", "document_ids", "n_tokens"], [NULL, ""])
@@ -288,9 +271,8 @@ class KnowledgeGraphDatabase:
         print("All data imported.")
         
     def create_entity_name_index(self):
-        """
-        Create an index for the entity name.
-        """
+        """Create an index for the entity name."""
+        
         index_name = "entity_name_index"
         self.driver.execute_query(""" 
         CREATE FULLTEXT INDEX """ + index_name + """ 
@@ -307,9 +289,8 @@ class KnowledgeGraphDatabase:
         print("Index name: ", index_name)
         
     def create_entity_description_vector_index(self):
-        """
-        Create a vector index for the entity.
-        """
+        """Create a vector index for the entity."""
+        
         index_name = "entity_description_vector_index"
         self.driver.execute_query(""" 
         CREATE VECTOR INDEX """ + index_name + """ 

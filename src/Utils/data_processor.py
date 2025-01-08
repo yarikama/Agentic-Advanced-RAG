@@ -42,58 +42,44 @@ class DataProcessor:
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
         print("Data Processor initialized")
         
-    def dataframe_process(self, 
-                          collection_name: str, 
-                          df: pd.DataFrame, 
-                          is_create: bool = const.IS_CREATE_COLLECTION, 
-                          use_new_corpus: bool = const.IS_USING_NEW_CORPUS,
-                          is_document_mapping: bool = const.IS_DOCUMENT_MAPPING):
-        """
-        This function processes the dataframe and inserts the documents into the vector database.
+    def dataframe_process(
+        self, 
+        collection_name: str, 
+        df: pd.DataFrame, 
+        is_create: bool = const.IS_CREATE_COLLECTION, 
+        use_new_corpus: bool = const.IS_USING_NEW_CORPUS,
+        is_document_mapping: bool = const.IS_DOCUMENT_MAPPING
+    ) -> None:
+        """This function processes the dataframe and inserts the documents into the vector database"""
         
-        Args:
-            collection_name: str
-            df: pd.DataFrame
-            is_create: bool
-            use_new_corpus: bool
-        """
         print(f"Processing dataframe with {df.shape[0]} rows...")
         documents = df.to_dict(orient='records')
         self.insert_document(collection_name, documents, is_create, use_new_corpus, is_document_mapping)
         print(f"Dataframe with {df.shape[0]} rows processed successfully.")
     
-    def single_file_process(self, 
-                            collection_name: str, 
-                            document_path: str, 
-                            is_create: bool = const.IS_CREATE_COLLECTION, 
-                            use_new_corpus: bool = const.IS_USING_NEW_CORPUS):
-        """
-        This function processes a single file and inserts the documents into the vector database.
-        
-        Args:
-            collection_name: str
-            document_path: str
-            is_create: bool
-            use_new_corpus: bool
-        """
+    def single_file_process(
+        self, 
+        collection_name: str, 
+        document_path: str, 
+        is_create: bool = const.IS_CREATE_COLLECTION, 
+        use_new_corpus: bool = const.IS_USING_NEW_CORPUS
+    ) -> None:
+        """This function processes a single file and inserts the documents into the vector database"""
+
         documents = self.load_document(document_path)
         print(f"Processing document {document_path} with {len(documents)} documents...")
         self.insert_document(collection_name, documents, is_create, use_new_corpus, False)
         print(f"Document {document_path} processed successfully.")
         
-    def directory_files_process(self, 
-                                collection_name: str, 
-                                directory_path: str, 
-                                is_create: bool = const.IS_CREATE_COLLECTION, 
-                                use_new_corpus: bool = const.IS_USING_NEW_CORPUS):
+    def directory_files_process(
+        self, 
+        collection_name: str, 
+        directory_path: str, 
+        is_create: bool = const.IS_CREATE_COLLECTION, 
+        use_new_corpus: bool = const.IS_USING_NEW_CORPUS
+    ) -> None:
         """
         This function processes all files in a directory and inserts the documents into the vector database.
-        
-        Args:
-            collection_name: str
-            directory_path: str
-            is_create: bool
-            use_new_corpus: bool
         """
         aggregated_directory_documents = []
         for root, _, files in os.walk(directory_path):
@@ -104,20 +90,15 @@ class DataProcessor:
         self.insert_document(collection_name, aggregated_directory_documents, is_create, use_new_corpus, False)
         print(f"Directory [\"{directory_path}\"] processed successfully.\n")        
     
-    def uploaded_file_process(self, 
-                            collection_name: str, 
-                            uploaded_file, 
-                            is_create: bool = const.IS_CREATE_COLLECTION, 
-                            use_new_corpus: bool = const.IS_USING_NEW_CORPUS):
-        """
-        This function processes a single uploaded file and inserts the documents into the vector database.
+    def uploaded_file_process(
+        self, 
+        collection_name: str, 
+        uploaded_file, 
+        is_create: bool = const.IS_CREATE_COLLECTION, 
+        use_new_corpus: bool = const.IS_USING_NEW_CORPUS
+    ) -> None:
+        """This function processes a single uploaded file and inserts the documents into the vector database"""
         
-        Args:
-            collection_name: str
-            uploaded_file: uploaded_file
-            is_create: bool
-            use_new_corpus: bool
-        """
         print(f"Processing uploaded file {uploaded_file.name}...")
         documents = self.load_uploaded_file(uploaded_file)
         print(f"Uploaded file {uploaded_file.name} loaded with {len(documents)} documents.")
