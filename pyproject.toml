@@ -49,6 +49,7 @@ beautifulsoup4 = "^4.12.3"
 anthropic = "^0.34.2"
 google-generativeai = "^0.8.1"
 cohere = "^5.9.2"
+pre-commit = "^4.0.1"
 
 
 [tool.poetry.group.dev.dependencies]

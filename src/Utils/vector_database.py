@@ -7,19 +7,26 @@ import warnings
 class VectorDatabase:
     _instance = None
 
-    def __new__(cls, 
-                host: str = const.MILVUS_HOST, 
-                port: str = const.MILVUS_PORT, 
-                database_name: str = const.MILVUS_DATABASE_NAME):
+    def __new__(
+        cls, 
+        host: str = const.MILVUS_HOST, 
+        port: str = const.MILVUS_PORT, 
+        database_name: str = const.MILVUS_DATABASE_NAME
+    ) -> 'VectorDatabase':
+        """
+        This is a singleton class for the vector database.
+        """
         if cls._instance is None:
             cls._instance = super(VectorDatabase, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, 
-                host: str = const.MILVUS_HOST, 
-                port: str = const.MILVUS_PORT, 
-                database_name: str = const.MILVUS_DATABASE_NAME):
+    def __init__(
+        self, 
+        host: str = const.MILVUS_HOST, 
+        port: str = const.MILVUS_PORT, 
+        database_name: str = const.MILVUS_DATABASE_NAME
+    ):
         if self._initialized:
             return
         self.host = host
@@ -30,7 +37,7 @@ class VectorDatabase:
         self.loaded_collections = set()  
         print("VectorDatabase initialized.")
         
-    def connect(self):
+    def connect(self) -> MilvusClient:
         connections.connect(
             host=self.host, 
             port=self.port, 
@@ -115,12 +122,12 @@ class VectorDatabase:
         collection.create_index("sparse_vector", sparse_index_params)
         print(f"Successfully created indexes for collection {collection_name}.")
 
-    def create_collection_from_dataframe(self, 
-                                        collection_name: str, 
-                                        df: pd.DataFrame, 
-                                        dense_dim: int = const.EMBEDDING_DENSE_DIM
-                                        ):
-        
+    def create_collection_from_dataframe(
+        self, 
+        collection_name: str, 
+        df: pd.DataFrame, 
+        dense_dim: int = const.EMBEDDING_DENSE_DIM
+    ):
         if self.client.has_collection(collection_name):
             raise ValueError(f"Collection {collection_name} already exists.")
         pass
