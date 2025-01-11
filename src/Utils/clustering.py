@@ -14,13 +14,14 @@ class Clustering:
         
         print("Clustering initialized")
         
-    def clustering_result_output(self,
-                                 collection_name: str,
-                                 labels,
-                                 sampling_ratio,
-                                 data,
-                                 method
-                                 ):
+    def clustering_result_output(
+        self,
+        collection_name: str,
+        labels,
+        sampling_ratio,
+        data,
+        method
+    ):
         """
         Result output : including sorting, sampling, searching, and writing to a text file.
         Args:
