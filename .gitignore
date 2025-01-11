@@ -8,7 +8,7 @@ volumes/
 .txt/
 *.txt
 .env
-graph_rag/*
+graph_rag/
 graph_rag_multihop/
 graph_rag_sample/
 graph_rag_embedding_experimental/
@@ -17,3 +17,5 @@ graph_rag/output/20240825-164936/artifacts/*
 !graph_rag/output/20240825-164936/artifacts/**
 !graph_rag/settings.yaml
 !graph_rag/prompts/
+*.json
+
