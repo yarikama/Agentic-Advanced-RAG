@@ -26,6 +26,7 @@ class Retriever:
         graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
         embedder: Optional[Embedder] = None
     ) -> 'Retriever':
+        """Singleton pattern to ensure that only one instance of Retriever is created."""
         if cls._instance is None:
             cls._instance = cls(vectordatabase, graphdatabase, embedder)
         return cls._instance
@@ -36,7 +37,6 @@ class Retriever:
         graphdatabase: Optional[KnowledgeGraphDatabase] = None, 
         embedder: Optional[Embedder] = None
     ) -> 'Retriever':
-        
         self.embedder = embedder if embedder else Embedder()
         self.vectordatabase = vectordatabase if vectordatabase else VectorDatabase()
         self.graphdatabase = graphdatabase if graphdatabase else KnowledgeGraphDatabase()
@@ -59,7 +59,6 @@ class Retriever:
         field_name: str,
         top_k: int = const.TOP_K
     ) -> List[Dict[str, Any]]:
-        
         if const.IS_GPU_INDEX:
             dense_search_param = {
                 "data": dense_query_vectors,
@@ -110,7 +109,11 @@ class Retriever:
         sparse_search_request = AnnSearchRequest(**sparse_search_param)
         return sparse_search_request
     
-    def hybrid_search_request(self, dense_query_vectors: Union[List[float], List[List[float]]], sparse_query_vectors: Union[List[float], List[List[float]]]):
+    def hybrid_search_request(
+        self,
+        dense_query_vectors: Union[List[float], List[List[float]]], 
+        sparse_query_vectors: Union[List[float], List[List[float]]]
+    ) -> List[Dict[str, Any]]:
         dense_search_request = self.dense_search_request(dense_query_vectors, "dense_vector")
         sparse_search_request = self.sparse_search_request(sparse_query_vectors, "sparse_vector")
         hybrid_search_requests = [dense_search_request, sparse_search_request]
@@ -444,13 +447,15 @@ class Retriever:
         
         return result    
     
-    def local_retrieve_relationship_vector_search(self, 
-                                                query_texts: List[str],
-                                                top_entities: int = const.NEO4J_TOP_ENTITIES,
-                                                top_chunks: int = const.NEO4J_TOP_CHUNKS,
-                                                top_communities: int = const.NEO4J_TOP_COMMUNITIES,
-                                                top_searching_relationships: int = const.NEO4J_TOP_RELATIONSHIPS,
-                                                top_retrieving_relationships: int = const.NEO4J_TOP_RELATIONSHIPS) -> Dict[str, Any]:
+    def local_retrieve_relationship_vector_search(
+        self, 
+        query_texts: List[str],
+        top_entities: int = const.NEO4J_TOP_ENTITIES,
+        top_chunks: int = const.NEO4J_TOP_CHUNKS,
+        top_communities: int = const.NEO4J_TOP_COMMUNITIES,
+        top_searching_relationships: int = const.NEO4J_TOP_RELATIONSHIPS,
+        top_retrieving_relationships: int = const.NEO4J_TOP_RELATIONSHIPS
+    ) -> Dict[str, Any]:
         """
         This function is used to retrieve the local search results from the graph database.
         Args:
@@ -546,11 +551,12 @@ class Retriever:
         
         return result
     
-    def local_retrieve_community_vector_search(self, 
-                                                query_texts: List[str],
-                                                top_searching_communities: int = const.NEO4J_TOP_COMMUNITIES,
-                                                top_retrieving_communities: int = const.NEO4J_TOP_COMMUNITIES,
-                                              ) -> Dict[str, Any]:
+    def local_retrieve_community_vector_search(
+        self, 
+        query_texts: List[str],
+        top_searching_communities: int = const.NEO4J_TOP_COMMUNITIES,
+        top_retrieving_communities: int = const.NEO4J_TOP_COMMUNITIES,
+    ) -> Dict[str, Any]:
         """
         This function is used to retrieve the local search results from the graph database.
         Args:
@@ -560,7 +566,6 @@ class Retriever:
         Returns:
             result: Dict[str, List[str]]
                 - community_summaries: List[str]
-                
         """     
         
         queries_vectors = self.embedder.embed_dense(query_texts)

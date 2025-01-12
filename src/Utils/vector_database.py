@@ -58,12 +58,12 @@ class VectorDatabase:
     def list_collections(self):
         return self.client.list_collections()
 
-    def create_collection(self, 
-                        collection_name: str, 
-                        dense_dim: int = const.EMBEDDING_DENSE_DIM,
-                        is_document_mapping: bool = const.IS_DOCUMENT_MAPPING
-                        ):
-
+    def create_collection(
+        self, 
+        collection_name: str, 
+        dense_dim: int = const.EMBEDDING_DENSE_DIM,
+        is_document_mapping: bool = const.IS_DOCUMENT_MAPPING
+    ):
         if self.client.has_collection(collection_name):
             warnings.warn(f"Collection {collection_name} already exists, skipping creation.")
             return
@@ -175,13 +175,14 @@ class VectorDatabase:
             for hit in hits
         ]
 
-    def hybrid_search(self, 
-                    collection_name: str, 
-                    search_requests, 
-                    rerank_type: str = const.RERANK_TYPE,
-                    weights: List[float] = const.RERANK_WEIGHTS,    
-                    top_k: int = const.TOP_K,
-                    ) -> List[Dict[str, Any]]:
+    def hybrid_search(
+        self, 
+        collection_name: str, 
+        search_requests, 
+        rerank_type: str = const.RERANK_TYPE,
+        weights: List[float] = const.RERANK_WEIGHTS,    
+        top_k: int = const.TOP_K,
+    ) -> List[Dict[str, Any]]:
         """
         This function is used to perform a hybrid search on the vector database.
         It uses the WeightedRanker or RRFRanker to rerank the search results.

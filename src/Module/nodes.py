@@ -53,7 +53,6 @@ class NodesModularRAG:
         )
         return [(result.document.text, int(result.relevance_score*100)) for result in response.results if result.relevance_score > 0.2]
 
-    
     def generate_community_summary_and_possible_answers(self, prompt: str, data: List[str]):
         """
         This function is used to generate the community summary and possible answers given the prompt and data.
@@ -174,7 +173,6 @@ class NodesModularRAG:
         return sorted_data, sorted_data_with_scores
     
     # Nodes
-        
     def user_query_classification_node(self, state: UnitQueryState):
         """
         This function is used to classify the user query.
@@ -620,16 +618,13 @@ class NodesParallelDataset:
             "generation_result": sorted_generation_result
         }
     
-        
-    
-    
 class NodesMultiAgentRAG:
-    def __init__(self, 
-                user_query: str, 
-                specific_collection: str, 
-                rag_config: RAGConfig,
-                ):
-        
+    def __init__(
+        self, 
+        user_query: str, 
+        specific_collection: str, 
+        rag_config: RAGConfig,
+    ):    
         self.rag_system = MultiAgent_RAG(rag_config)
         self.rag_system.tasks.update_tasks(user_query, specific_collection)
     
@@ -637,12 +632,12 @@ class NodesMultiAgentRAG:
         return self.rag_system.overall_run()
     
 class NodesSingleAgentRAG:
-    def __init__(self, 
-                user_query: str, 
-                specific_collection: str, 
-                rag_config: RAGConfig,
-                ):
-        
+    def __init__(
+        self, 
+        user_query: str, 
+        specific_collection: str, 
+        rag_config: RAGConfig,
+    ):    
         self.user_query = user_query
         self.specific_collection = specific_collection
         self.rag_system = SingleAgent(rag_config)
