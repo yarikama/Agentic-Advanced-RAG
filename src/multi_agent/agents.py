@@ -2,16 +2,19 @@ from crewai import Agent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from .tools import Tools
-from langchain_core.callbacks.base import BaseCallbackHandler
 import config.constants as const 
 
 class Agents:
-    def __init__(self, temperature: float, model_name: str, tools: Tools):
+    def __init__(
+        self, 
+        temperature: float, 
+        model_name: str, 
+        tools: Tools
+    ):
         load_dotenv()
         self.temperature = temperature
         self.tools = tools
         self.model_name = model_name
-        self.callback_function = BaseCallbackHandler
         if self.model_name != "crewAI-llama3":
             self.llm = ChatOpenAI(
                 model = self.model_name,
