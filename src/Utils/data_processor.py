@@ -16,7 +16,7 @@ from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from .embedder import Embedder
 from datasets import load_dataset
-from Config import constants as const
+from config import constants as const
 from .vector_database import VectorDatabase
 from langchain.schema.document import Document
 from typing import List, Union, Dict, Generator, Optional

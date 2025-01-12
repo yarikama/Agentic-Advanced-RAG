@@ -2,16 +2,16 @@ import os
 from openai import OpenAI
 from dotenv import load_dotenv
 from .embedder import Embedder
-import Config.constants as const
+import config.constants as const
 from pymilvus import AnnSearchRequest
 from .vector_database import VectorDatabase
 from .knowledge_graph_database import KnowledgeGraphDatabase
 from langchain_community.vectorstores import Neo4jVector
 from langchain_community.graphs import Neo4jGraph
 from langchain_openai import OpenAIEmbeddings, ChatOpenAI
-from Config.task_prompts import HYDE_PROMPT
+from config.task_prompts import HYDE_PROMPT
 from typing import List, Dict, Any, Union, Optional, Set
-from Config.output_pydantic import HyDEOutput
+from config.output_pydantic import HyDEOutput
 import json
 import hashlib
 load_dotenv()

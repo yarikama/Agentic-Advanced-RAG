@@ -1,7 +1,7 @@
 from pydantic import BaseModel, Field
 from typing import List, Optional, Dict, Any, Annotated, Tuple
 import pandas as pd
-import Config.constants as const
+import config.constants as const
 
 # Pydantic Models For LLM Structure Outputs
 class HyDEOutput(BaseModel):

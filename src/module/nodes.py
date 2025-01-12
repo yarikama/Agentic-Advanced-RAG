@@ -1,14 +1,14 @@
 from MultiAgent import *
 from SingleAgent import *
 from Utils import *
-from Config.rag_config import RAGConfig
-from Config.output_pydantic import *
-from Config.constants import *
+from config.rag_config import RAGConfig
+from config.output_pydantic import *
+from config.constants import *
 from statistics import median
 from langgraph.constants import Send
-from Config.task_prompts import GLOBAL_MAPPING_PROMPT
+from config.task_prompts import GLOBAL_MAPPING_PROMPT
 from langchain_openai import ChatOpenAI
-import Config.constants as const
+import config.constants as const
 import cohere
 
 class NodesModularRAG:

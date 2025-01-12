@@ -1,5 +1,5 @@
 import pandas as pd
-from Config import constants as const
+from config import constants as const
 from typing import List, Dict, Any
 from pymilvus import WeightedRanker, RRFRanker, connections, FieldSchema, CollectionSchema, DataType, Collection, MilvusClient, AnnSearchRequest
 import warnings

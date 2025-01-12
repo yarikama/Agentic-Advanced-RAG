@@ -5,7 +5,7 @@ from dotenv import load_dotenv
 from neo4j import GraphDatabase, Result
 from typing import List, Dict, Any
 from langchain_community.graphs import Neo4jGraph
-import Config.constants as const
+import config.constants as const
 from textwrap import dedent
 from knowledge_graph_statements import (
     document_statement, 

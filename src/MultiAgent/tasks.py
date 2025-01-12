@@ -2,8 +2,8 @@ from crewai import Task
 from typing import List
 from .tools import Tools
 from .agents import Agents
-from Config.output_pydantic import *
-from Config.task_prompts import *
+from config.output_pydantic import *
+from config.task_prompts import *
 
 # All Tasks
 class Tasks:

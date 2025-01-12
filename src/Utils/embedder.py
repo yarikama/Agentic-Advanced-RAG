@@ -4,7 +4,7 @@ import os
 import numpy as np
 from pymilvus import model
 from dotenv import load_dotenv
-from Config import constants as const
+from config import constants as const
 from typing import Union, List, Dict
 from sentence_transformers import SentenceTransformer
 from pymilvus.model.sparse import BM25EmbeddingFunction # type: ignore

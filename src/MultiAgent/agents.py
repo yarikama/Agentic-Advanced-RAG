@@ -5,7 +5,7 @@ from langchain_openai import ChatOpenAI
 from .tools import Tools
 # from Frontend import * 
 from langchain_core.callbacks.base import BaseCallbackHandler
-import Config.constants as const 
+import config.constants as const 
 
 class Agents:
     def __init__(self, temperature: float, model_name: str, tools: Tools):
