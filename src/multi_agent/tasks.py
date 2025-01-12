@@ -17,13 +17,10 @@ class Tasks:
         self.create_sub_queries_classification_task_with_specific_collection      = self._sub_queries_classification_task_with_specific_collection([self.create_query_process_task])
         self.create_sub_queries_classification_task_without_specific_collection   = self._sub_queries_classification_task_without_specific_collection([self.create_query_process_task])
         self.create_global_topic_searching_task                                   = self._global_topic_searching_task()
-        # self.create_global_topic_reranking_task                                   = self._global_topic_reranking_task()
-        # self.create_local_topic_reranking_task                                    = self._local_topic_reranking_task()
         self.create_local_topic_searching_task                                    = self._local_topic_searching_task()
         self.create_global_mapping_task                                           = self._global_mapping_task()
         self.create_retrieval_task                                                = self._retrieval_task([self.create_sub_queries_classification_task_with_specific_collection, self.create_sub_queries_classification_task_without_specific_collection])
         self.create_retrieval_detail_data_from_topic_task                         = self._retrieval_detail_data_from_topic_task()
-        # self.create_reranking_task                                                = self._reranking_task([self.create_retrieval_task, self.create_retrieval_detail_data_from_topic_task])
         self.create_information_organization_task                                 = self._information_organization_task()
         self.create_generation_task                                               = self._generation_task()
         self.create_response_audit_task                                           = self._response_audit_task([self.create_generation_task])
@@ -37,13 +34,10 @@ class Tasks:
             "Sub Queries Classification w/ sc":     self.create_sub_queries_classification_task_with_specific_collection,
             "Sub Queries Classification w/o sc":    self.create_sub_queries_classification_task_without_specific_collection,
             "Global Topic Searching":               self.create_global_topic_searching_task,
-            # "Global Topic Reranking":               self.create_global_topic_reranking_task,
-            # "Local Topic Reranking":                self.create_local_topic_reranking_task,
             "Local Topic Searching":                self.create_local_topic_searching_task,
             "Retrieval":                            self.create_retrieval_task,
             "Retrieval Detail Data From Topic":     self.create_retrieval_detail_data_from_topic_task,
             "Global Mapping":                       self.create_global_mapping_task,
-            # "Reranking":                            self.create_reranking_task,
             "Information Organization":             self.create_information_organization_task,
             "Generation":                           self.create_generation_task,
             "Response Audit":                       self.create_response_audit_task,
@@ -271,38 +265,3 @@ class Tasks:
             tools=self.tools.get_tools(**{"insert_qa_into_db": False}),
             expected_output=DATABASE_UPDATE_EXPECTED_OUTPUT,
         )
-
-    # def _reranking_task(self, context_task_array: List[Task]):
-    #     """
-    #     Task to rerank the retrieved data
-    #     args: user_query
-    #     """
-    #     return Task(
-    #         agent=self.agents.create_reranker,
-    #         description=RERANKING_PROMPT,
-    #         expected_output=RERANKING_EXPECTED_OUTPUT,
-    #         output_pydantic=RerankingResult,
-    #         context=context_task_array,
-    #     )
-    # def _global_topic_reranking_task(self):
-    #     """
-    #     Task to rerank the topics (map in Microsoft Graph RAG)
-    #     args: communities
-    #     """
-    #     return Task(
-    #         agent=self.agents.create_reranker,
-    #         description=GLOBAL_TOPIC_RERANKING_PROMPT,
-    #         expected_output=GLOBAL_TOPIC_RERANKING_EXPECTED_OUTPUT,
-    #         output_pydantic=TopicRerankingResult,
-    #     )
-    # def _local_topic_reranking_task(self):
-    #     """
-    #     Task to rerank the topics (reduce in Microsoft Graph RAG)
-    #     args: flattened_data(List[str]) from local retrieval
-    #     """
-    #     return Task(
-    #         agent=self.agents.create_reranker,
-    #         description=LOCAL_TOPIC_RERANKING_PROMPT,
-    #         expected_output=LOCAL_TOPIC_RERANKING_EXPECTED_OUTPUT,
-    #         output_pydantic=TopicRerankingResult,
-    #     )
