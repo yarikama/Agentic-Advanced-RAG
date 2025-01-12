@@ -8,7 +8,7 @@ from .tools import Tools
 from .tasks import Tasks
 from .agents import Agents
 
-from config.output_pydantic import TopicRerankingResult, RerankingResult
+from config.output_pydantic import RerankingResult
 from config.rag_config import RAGConfig
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
@@ -23,19 +23,16 @@ class MultiAgent_RAG:
             rag_config (RAGConfig): Configuration for the RAG system.
         """
         # LLM Settings
-        self.model_name = rag_config.model_name if rag_config.model_name else const.MODEL_NAME
-        self.model_temperature = rag_config.model_temperature if rag_config.model_temperature else const.MODEL_TEMPERATURE  
-        self.user_query = rag_config.user_query if rag_config.user_query else None
-        self.specific_collection = rag_config.specific_collection if rag_config.specific_collection else None
-        # Callback
-        # self.callback_function = rag_config.callback_function if rag_config.callback_function else None
+        self.model_name = rag_config.model_name or const.MODEL_NAME
+        self.model_temperature = rag_config.model_temperature or const.MODEL_TEMPERATURE  
+        self.user_query = rag_config.user_query or None
+        self.specific_collection = rag_config.specific_collection or None
         
         # Tools, Agents, Tasks
         self.tools = Tools()
         self.agents = Agents(self.model_temperature, self.model_name, self.tools)
         self.tasks = Tasks(self.agents, self.tools)
         print("MultiAgent RAG System initialized")
-        # self.agents = Agents(self.model_temperature, self.model_name, self.tools, self.callback_function)
 
                 
     def run_crew(self, **kwargs):
@@ -207,35 +204,6 @@ class MultiAgent_RAG:
             node_process="Sequential",
         )
         return self.tasks.create_sub_queries_classification_task_without_specific_collection.output.pydantic
-        
-            
-    # def global_topic_reranking_run_batch_async(self, **kwargs):
-    #     """
-    #     Run the global topic reranking task asynchronously in batches.
-
-    #     Args:
-    #         **kwargs: Must include 'node_batch_inputs' (List[Dict]).
-    #         node_batch_inputs: List of Dicts containing:
-    #             user_query (str): The user query.
-    #             sub_queries (Optional[List[str]]): The sub-queries.
-    #             batch_communities (List[str]): The batch communities.
-    #             batch_size (int): The batch size.
-
-    #     Returns:
-    #         TopicRerankingResult: A Pydantic model containing:
-    #             - relevant_scores (List[int]): List of relevance scores for topics.
-    #     """
-    #     results = self.run_crew_batch_async(   
-    #         node_agents=["Reranker"],
-    #         node_tasks=["Global Topic Reranking"],
-    #         node_process="Sequential",
-    #         node_batch_inputs=kwargs.get("node_batch_inputs")
-    #     )
-    #     all_scores = []
-    #     for result in results:
-    #         batch_scores = result.pydantic.relevant_scores
-    #         all_scores.extend(batch_scores)
-    #     return TopicRerankingResult(relevant_scores=all_scores)
     
     def global_mapping_run(self, **kwargs):
         """
@@ -251,9 +219,10 @@ class MultiAgent_RAG:
             node_agents=["Synthesizer"],
             node_tasks=["Global Mapping"],
             node_process="Sequential",
-            node_inputs={"user_query": kwargs.get("user_query"), 
-                        "batch_data": kwargs.get("batch_data"),
-                        }
+            node_inputs={
+                "user_query": kwargs.get("user_query"), 
+                "batch_data": kwargs.get("batch_data"),
+            }
         )
         return self.tasks.create_global_mapping_task.output.pydantic
         
@@ -276,10 +245,11 @@ class MultiAgent_RAG:
             node_agents=["Topic Searcher"],
             node_tasks=["Global Topic Searching"],
             node_process="Sequential",
-            node_inputs={"user_query": kwargs.get("user_query"), 
-                        "sub_queries": kwargs.get("sub_queries"),
-                        "data": kwargs.get("data"),
-                        }
+            node_inputs={
+                "user_query": kwargs.get("user_query"), 
+                "sub_queries": kwargs.get("sub_queries"),
+                "data": kwargs.get("data"),
+            }
         )
         return self.tasks.create_global_topic_searching_task.output.pydantic
         
@@ -303,16 +273,6 @@ class MultiAgent_RAG:
                         }
         )
         return self.tasks.create_local_topic_searching_task.output.pydantic
-        
-        
-    # def retrieval_detail_data_from_topic_run(self, **kwargs):
-    #     self.run_crew(
-    #         node_agents=["Retriever"],
-    #         node_tasks=["Retrieval Detail Data From Topic"],
-    #         node_process="Sequential",
-    #         node_inputs={""}123123123123123
-    #     )
-    #     return self.tasks.create_retrieval_detail_data_from_topic_task.output.pydantic
         
     def reranking_run_batch_async(self, **kwargs):
         """
@@ -351,9 +311,11 @@ class MultiAgent_RAG:
             node_agents=["Information Organizer"],
             node_tasks=["Information Organization"],
             node_process="Sequential",
-            node_inputs={"user_query": kwargs.get("user_query"), 
-                         "retrieved_data": kwargs.get("retrieved_data"),
-                         "sub_queries": kwargs.get("sub_queries")}
+            node_inputs={
+                "user_query": kwargs.get("user_query"), 
+                "retrieved_data": kwargs.get("retrieved_data"),
+                "sub_queries": kwargs.get("sub_queries")
+            }
         )
         return self.tasks.create_information_organization_task.output.pydantic
     
@@ -372,38 +334,14 @@ class MultiAgent_RAG:
             node_agents=["Generator"],
             node_tasks=["Generation"],
             node_process="Sequential",
-            node_inputs={"user_query": kwargs.get("user_query"),
-                         "sub_queries": kwargs.get("sub_queries"),
-                         "information": kwargs.get("information"),
-                         "retrieval_needed": kwargs.get("retrieval_needed")
-                         } 
+            node_inputs={
+                "user_query": kwargs.get("user_query"),
+                "sub_queries": kwargs.get("sub_queries"),
+                "information": kwargs.get("information"),
+                "retrieval_needed": kwargs.get("retrieval_needed")
+            } 
         )
         return self.tasks.create_generation_task.output.raw
-    
-
-        
-        
-        
-    
-    
-    # def retrieval_and_generation_run(self):
-    #     # Crew with process
-    #     self.crew = Crew(  
-    #         agents=self.agents.get_retrieval_and_generation_node_agent(),
-    #         tasks=self.tasks.get_retrieval_and_generation_node_tasks(),
-    #         process=Process.sequential,
-    #         verbose=const.CREWAI_AGENT_VERBOSE,
-    #         output_log_file="logs.txt",
-    #     )
-    #     self.crew.kickoff()
-    #     return {
-    #         "queries": self.tasks.create_query_processor_task.output.pydantic,
-    #         "queries_identification": self.tasks.create_classification_task.output.pydantic,
-    #         "refined_retrieval_data": self.tasks.create_retrieval_task.output.pydantic,
-    #         "ranked_retrieval_data": self.tasks.create_rerank_task.output.pydantic,
-    #         "result": self.tasks.create_summarizer_task.output,
-    #         "audit_result": self.tasks.create_response_auditor_task.output.pydantic,
-    #     }
     
     def database_update_run(self):
         """
@@ -416,7 +354,6 @@ class MultiAgent_RAG:
                     - reason (str): Explanation for the update result.
         """
         # Any update Here
-        #
         
         # Crew with process
         self.crew = Crew(  
