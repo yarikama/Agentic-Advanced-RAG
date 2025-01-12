@@ -1,5 +1,5 @@
 import torch
-from Utils import *
+from utils import *
 from transformers import AutoTokenizer, AutoModelForSequenceClassification
 from typing import List
 from langchain_openai import ChatOpenAI

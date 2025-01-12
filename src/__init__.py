@@ -1,8 +1,8 @@
-from .Utils import *
+from .utils import *
 from .config import *
 from .module import *
 from .Frontend import *
-from .MultiAgent import *
-from .SingleAgent import *
+from .multi_agent import *
+from .single_agent import *
 
-__all__ = ["Utils", "config", "module", "Frontend", "MultiAgent", "SingleAgent"]
+__all__ = ["utils", "config", "module", "Frontend", "multi_agent", "SingleAgent"]

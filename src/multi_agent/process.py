@@ -1,7 +1,7 @@
 from dotenv import load_dotenv
 from crewai import Crew, Process
 
-from Utils import *
+from utils import *
 import config.constants as const
 
 from .tools import Tools
