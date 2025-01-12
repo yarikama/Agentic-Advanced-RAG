@@ -1,9 +1,7 @@
 from crewai import Agent
-from textwrap import dedent
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 from .tools import Tools
-# from Frontend import * 
 from langchain_core.callbacks.base import BaseCallbackHandler
 import config.constants as const 
 
@@ -13,7 +11,6 @@ class Agents:
         self.temperature = temperature
         self.tools = tools
         self.model_name = model_name
-        # self.callback_function = callback_function
         self.callback_function = BaseCallbackHandler
         if self.model_name != "crewAI-llama3":
             self.llm = ChatOpenAI(
@@ -35,7 +32,6 @@ class Agents:
         self.create_classifier = self._classifier()
         self.create_topic_searcher = self._topic_searcher()
         self.create_retriever = self._retriever()
-        # self.create_reranker = self._reranker()
         self.create_synthesizer = self._synthesizer()
         self.create_information_organizer = self._information_organizer()
         self.create_generator = self._generator()
@@ -48,7 +44,6 @@ class Agents:
             "Query Processor": self.create_query_processor,
             "Topic Searcher": self.create_topic_searcher,
             "Retriever": self.create_retriever,
-            # "Reranker": self.create_reranker,
             "Synthesizer": self.create_synthesizer,
             "Information Organizer": self.create_information_organizer,
             "Generator": self.create_generator,
@@ -95,7 +90,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _plan_coordinator(self):
@@ -114,7 +108,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _query_processor(self):
@@ -133,7 +126,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _topic_searcher(self):
@@ -154,7 +146,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _retriever(self):
@@ -173,7 +164,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _synthesizer(self):
@@ -190,7 +180,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _information_organizer(self):
@@ -207,8 +196,7 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             cache=True,
-            allow_delegation=False,
-    #         callbacks=[self.callback_function],   
+            allow_delegation=False,  
         )
 
     def _generator(self):
@@ -225,7 +213,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _response_auditor(self):
@@ -245,7 +232,6 @@ class Agents:
             llm=self.llm,
             memory=const.CREWAI_AGENT_MEMORY,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
         
     def _database_updater(self):
@@ -263,24 +249,4 @@ class Agents:
             memory=const.CREWAI_AGENT_MEMORY,
             cache=True,
             allow_delegation=False,
-#             callbacks=[self.callback_function],
         )
-        
-#     def _reranker(self):
-#         return Agent(
-#             role='Reranker',
-#             goal="""Evaluate and reorder retrieved data based on query relevance,
-#             and assess the relevance of retrieved data to the original query.
-#             You need to carefully compare each piece of data to the query, assign a relevance score,
-#             """,
-#             backstory="""
-#             You are a former search engine optimizer with a keen eye for relevance. Your experience 
-#             in ranking information has given you unique insights into assessing and prioritizing 
-#             information based on its pertinence to a given query.
-#             """,
-#             verbose=const.CREWAI_AGENT_VERBOSE,
-#             llm=self.llm,
-#             memory=const.CREWAI_AGENT_MEMORY,
-#             allow_delegation=False,
-# #             callbacks=[self.callback_function],
-#         )
