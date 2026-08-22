@@ -1,3 +1,5 @@
+
+
 # Multi-Agentic Hybrid RAG Experiment
 
 ## 前提
@@ -59,7 +61,7 @@ Graph RAG 因為建立資料時，取出的比例較原本少，導致資訊遺�
 
 ## 注意的點
 
-1. 使用 sparse embedding 需要先建立文本的 corpus。
+1. 使用 sparse embedding 需要先建立文本的 corpus（目前設定為 `corpus.json`）。
 2. graph rag (microsoft) 這邊先轉移至 Neo4j，自己寫 cypher 來產生更好搜尋方式。
 3. LangGraph 的 workflow 在 jupyter notebook 上若需要執行，要用 nest_asyncio 來解決。
 4. 建議連線至 milvus 或 neo4j 的 client 都使用 singleton 的方式設計，以避免多次連線，或是 memory 爆炸。
